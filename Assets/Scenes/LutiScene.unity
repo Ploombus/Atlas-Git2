@@ -183,7 +183,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 539509624}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dbe05f6133f415e4bbfc6e3db8dc8008, type: 3}
   m_Name: 
@@ -191,7 +191,6 @@ MonoBehaviour:
   uiDocument: {fileID: 539509625}
   showScoreboard: 1
   updateInterval: 0.5
-  showResourcesInScoreboard: 1
 --- !u!114 &539509628
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204,8 +203,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37bc455eefa5b70449d0f91b190e2b9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScoreboardECSBridge
-  scoreboardManager: {fileID: 539509627}
-  updateFrequency: 1
 --- !u!1 &1472135022
 GameObject:
   m_ObjectHideFlags: 0
@@ -304,7 +301,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TesterUI
   _TesterUI: {fileID: 1934803231}
-  resourceManager: {fileID: 1952141812}
 --- !u!4 &1934803233
 Transform:
   m_ObjectHideFlags: 0
@@ -320,50 +316,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1952141809
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1952141811}
-  - component: {fileID: 1952141812}
-  m_Layer: 0
-  m_Name: ResourceManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1952141811
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1952141809}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1952141812
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1952141809}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6635aa40c4db0664fbc192b1531ffc86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResourceManager
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -371,4 +323,3 @@ SceneRoots:
   - {fileID: 539509626}
   - {fileID: 1472135024}
   - {fileID: 1934803233}
-  - {fileID: 1952141811}

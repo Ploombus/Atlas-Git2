@@ -1,19 +1,18 @@
 using System;
 using Unity.Entities;
 
-/// <summary>
-/// CLEANED: BuildingUIEvents system that matches current usage
-/// </summary>
 public static class BuildingUIEvents
 {
-    // Events
     public static event Action<BuildingSelectedEventData> OnBuildingSelected;
+
     public static event Action OnBuildingDeselected;
+
     public static event Action<SpawnCostUIData> OnSpawnCostUpdated;
+
     public static event Action<ResourceUIData> OnResourcesUpdated;
+
     public static event Action<SpawnValidationData> OnSpawnValidated;
 
-    // Event trigger methods
     public static void RaiseBuildingSelected(BuildingSelectedEventData data)
     {
         OnBuildingSelected?.Invoke(data);
@@ -40,15 +39,15 @@ public static class BuildingUIEvents
     }
 }
 
-/// <summary>
-/// Event data structures - Updated to match current usage
-/// </summary>
+// Data structures for events
 public struct BuildingSelectedEventData
 {
     public Entity BuildingEntity;
-    public bool IsOwned;           // Simple ownership flag
+    public bool HasSpawnCapability;
     public int Resource1Cost;
     public int Resource2Cost;
+    public int OwnerNetworkId;        
+    public int LocalPlayerNetworkId; 
 }
 
 public struct SpawnCostUIData
@@ -63,7 +62,7 @@ public struct ResourceUIData
 {
     public int CurrentResource1;
     public int CurrentResource2;
-    public int RequiredResource1;
+    public int RequiredResource1;  
     public int RequiredResource2;
     public bool CanAffordCurrent;
 }

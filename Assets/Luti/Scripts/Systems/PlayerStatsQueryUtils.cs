@@ -1,4 +1,4 @@
-using Unity.Entities;
+/*using Unity.Entities;
 using Unity.NetCode;
 using Unity.Collections;
 
@@ -124,4 +124,4 @@ public struct CurrentPlayerStatsData : IComponentData
     public int resource1Score;
     public int resource2Score;
     public bool hasValidData;
-}
+}*/

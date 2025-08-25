@@ -6,9 +6,10 @@ using Managers;
 
 public class TesterUI : MonoBehaviour
 {
-    public static TesterUI Instance { get; private set; } // ADDED: Static instance
+    public static TesterUI Instance { get; private set; }
 
     [SerializeField] private UIDocument _TesterUI;
+    // REMOVED: public ResourceManager resourceManager; // DELETE THIS LINE FROM SCENE AND COMPONENT
 
     // UI Elements
     private Button spawnerButton;
@@ -54,31 +55,43 @@ public class TesterUI : MonoBehaviour
         }
 
         var root = _TesterUI.rootVisualElement;
+        if (root == null)
+        {
+            Debug.LogError("TesterUI: Root visual element is null!");
+            return;
+        }
 
+        // Find UI elements
         spawnerButton = root.Q<Button>("SpawnerButton");
-        addResource1Button = root.Q<Button>("AddResource1Button");
-        addResource2Button = root.Q<Button>("AddResource2Button");
+        addResource1Button = root.Q<Button>("AddResource1");
+        addResource2Button = root.Q<Button>("AddResource2");
         resource1Input = root.Q<IntegerField>("Resource1Input");
         resource2Input = root.Q<IntegerField>("Resource2Input");
-
-        spawnerButton.RegisterCallback<ClickEvent>(StartBuildMode);
-        //addResource1Button.RegisterCallback<ClickEvent>(AddResource1Amount);
-        //addResource2Button.RegisterCallback<ClickEvent>(AddResource2Amount);
-
         buildingUI = root.Q<VisualElement>("BuildingUIPanel");
-        buildingUI.style.display = DisplayStyle.None;
-
         spawnUnitButton = root.Q<Button>("UnitButton");
-        spawnUnitButton.RegisterCallback<ClickEvent>(OnSpawnUnitClicked);
 
-        resource1Input.RegisterCallback<ChangeEvent<int>>((evt) => { resource1Input.value = evt.newValue; });
-        resource2Input.RegisterCallback<ChangeEvent<int>>((evt) => { resource2Input.value = evt.newValue; });
+        // Register callbacks if elements exist
+        spawnerButton?.RegisterCallback<ClickEvent>(StartBuildMode);
+        addResource1Button?.RegisterCallback<ClickEvent>(AddResource1Amount);
+        addResource2Button?.RegisterCallback<ClickEvent>(AddResource2Amount);
+        spawnUnitButton?.RegisterCallback<ClickEvent>(OnSpawnUnitClicked);
+
+        // Setup building UI
+        if (buildingUI != null)
+        {
+            buildingUI.style.display = DisplayStyle.None;
+        }
+
+        // Setup input field callbacks
+        resource1Input?.RegisterCallback<ChangeEvent<int>>((evt) => { resource1Input.value = evt.newValue; });
+        resource2Input?.RegisterCallback<ChangeEvent<int>>((evt) => { resource2Input.value = evt.newValue; });
 
         UpdateSpawnerButtonStyle();
     }
 
     private void SubscribeToEvents()
     {
+        // Subscribe to your actual BuildingUIEvents
         BuildingUIEvents.OnBuildingSelected += HandleBuildingSelected;
         BuildingUIEvents.OnBuildingDeselected += HandleBuildingDeselected;
         BuildingUIEvents.OnSpawnCostUpdated += HandleSpawnCostUpdated;
@@ -88,7 +101,7 @@ public class TesterUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Unsubscribe from events
+        // Unsubscribe from your actual BuildingUIEvents
         BuildingUIEvents.OnBuildingSelected -= HandleBuildingSelected;
         BuildingUIEvents.OnBuildingDeselected -= HandleBuildingDeselected;
         BuildingUIEvents.OnSpawnCostUpdated -= HandleSpawnCostUpdated;
@@ -101,32 +114,38 @@ public class TesterUI : MonoBehaviour
         }
     }
 
-    // Event Handlers
+    // CORRECTED: Event Handlers that properly check ownership
     private void HandleBuildingSelected(BuildingSelectedEventData data)
     {
-        isOwnerOfSelectedBuilding = data.IsOwned;
         selectedBuilding = data.BuildingEntity;
-        buildingUI.style.display = DisplayStyle.Flex;
 
-        // Update button text with costs
-        if (data.Resource1Cost > 0 || data.Resource2Cost > 0)
+        // Determine ownership by comparing NetworkIds
+        isOwnerOfSelectedBuilding = (data.OwnerNetworkId == data.LocalPlayerNetworkId) &&
+                                   (data.OwnerNetworkId != -999);
+
+        cachedResource1Cost = data.Resource1Cost;
+        cachedResource2Cost = data.Resource2Cost;
+
+        // Only show building UI if player owns the building AND it has spawn capability
+        if (isOwnerOfSelectedBuilding && data.HasSpawnCapability)
         {
-            string costText = $"Base Unit\nCost: ";
-            if (data.Resource1Cost > 0) costText += $"R1:{data.Resource1Cost} ";
-            if (data.Resource2Cost > 0) costText += $"R2:{data.Resource2Cost}";
-            spawnUnitButton.text = costText;
+            buildingUI.style.display = DisplayStyle.Flex;
+            UpdateUnitButtonDisplay();
+            UpdateAffordabilityUI();
         }
         else
         {
-            spawnUnitButton.text = "Base Unit";
+            buildingUI.style.display = DisplayStyle.None;
         }
     }
 
     private void HandleBuildingDeselected()
     {
-        isOwnerOfSelectedBuilding = false;
         selectedBuilding = Entity.Null;
+        isOwnerOfSelectedBuilding = false;
         buildingUI.style.display = DisplayStyle.None;
+        cachedResource1Cost = 0;
+        cachedResource2Cost = 0;
     }
 
     private void HandleSpawnCostUpdated(SpawnCostUIData data)
@@ -138,102 +157,64 @@ public class TesterUI : MonoBehaviour
         canAffordCurrent = data.CanAfford;
 
         UpdateUnitButtonDisplay();
-        UpdateUnitButtonState();
+        UpdateAffordabilityUI();
     }
 
     private void HandleResourcesUpdated(ResourceUIData data)
     {
         canAffordCurrent = data.CanAffordCurrent;
-        UpdateUnitButtonState();
+        UpdateAffordabilityUI();
     }
 
     private void HandleSpawnValidation(SpawnValidationData data)
     {
-        if (!data.Success)
-        {
-            Debug.Log($"Spawn failed: {data.Message}. Server will handle any refunds.");
-        }
+        // Handle spawn validation results silently
     }
 
-    // UI Methods
     private void UpdateUnitButtonDisplay()
     {
-        string costText = "Base Unit";
+        if (spawnUnitButton == null) return;
+
+        // Show "Base Unit" with cost info
         if (cachedResource1Cost > 0 || cachedResource2Cost > 0)
         {
-            costText += "\nCost: ";
-            if (cachedResource1Cost > 0)
-                costText += $"R1:{cachedResource1Cost} ";
-            if (cachedResource2Cost > 0)
-                costText += $"R2:{cachedResource2Cost}";
-        }
-
-        spawnUnitButton.text = costText;
-    }
-
-    private void UpdateUnitButtonState()
-    {
-        spawnUnitButton.SetEnabled(canAffordCurrent);
-
-        if (canAffordCurrent)
-        {
-            spawnUnitButton.RemoveFromClassList("insufficient-resources");
-            spawnUnitButton.tooltip = "";
+            string costText = "Base Unit\nCost: ";
+            if (cachedResource1Cost > 0) costText += $"R1:{cachedResource1Cost} ";
+            if (cachedResource2Cost > 0) costText += $"R2:{cachedResource2Cost}";
+            spawnUnitButton.text = costText;
         }
         else
         {
-            spawnUnitButton.AddToClassList("insufficient-resources");
-
-            // Calculate what's missing using PlayerStatsUtils
-            PlayerStatsUtils.GetMissingResources(cachedResource1Cost, cachedResource2Cost,
-                out int missingR1, out int missingR2);
-
-            if (missingR1 > 0 || missingR2 > 0)
-            {
-                string missingText = "Missing: ";
-                if (missingR1 > 0) missingText += $"R1:{missingR1} ";
-                if (missingR2 > 0) missingText += $"R2:{missingR2}";
-                spawnUnitButton.tooltip = missingText;
-            }
+            spawnUnitButton.text = "Base Unit";
         }
     }
 
-    private void Update()
+    private void UpdateAffordabilityUI()
     {
-        if (UIUtility.IsPointerOverUI()) return;
+        if (spawnUnitButton == null) return;
 
-        if (Input.GetMouseButtonDown(0) && buildMode)
+        // Update button state and style based on affordability
+        if (canAffordCurrent)
         {
-            int buildCost = 0; // Buildings are free for now
-
-            // Check if we can afford it (currently free, but structure ready for costs)
-            if (PlayerStatsUtils.CanAfford(buildCost, buildCost))
-            {
-                SpawnBarracksRpcRequest(MouseWorldPosition.Instance.GetPosition(), 1);
-                // Server will handle resource deduction if there are costs
-            }
-            else
-            {
-                PlayerStatsUtils.GetMissingResources(buildCost, buildCost,
-                    out int missingR1, out int missingR2);
-
-                if (missingR1 > 0)
-                    Debug.Log($"You are missing {missingR1} Resource1.");
-                if (missingR2 > 0)
-                    Debug.Log($"You are missing {missingR2} Resource2.");
-            }
+            spawnUnitButton.SetEnabled(true);
+            spawnUnitButton.RemoveFromClassList("unaffordable");
+        }
+        else
+        {
+            spawnUnitButton.SetEnabled(false);
+            spawnUnitButton.AddToClassList("unaffordable");
         }
     }
 
-    // Public methods for external access
+    // Public methods for external access (called by SelectionManager)
     public void ShowBuildingUI(Entity buildingEntity)
     {
-        selectedBuilding = buildingEntity;
+        // Events handle the actual UI display logic
     }
 
     public void HideBuildingUI()
     {
-        selectedBuilding = Entity.Null;
+        // Events handle the actual UI hiding logic
     }
 
     public Entity GetSelectedBuilding()
@@ -255,6 +236,8 @@ public class TesterUI : MonoBehaviour
 
     private void UpdateSpawnerButtonStyle()
     {
+        if (spawnerButton == null) return;
+
         if (buildMode)
         {
             spawnerButton.text = "Stop Building";
@@ -267,7 +250,7 @@ public class TesterUI : MonoBehaviour
         }
     }
 
-    // Resource buttons now send RPCs to server instead of modifying local resources
+    // FIXED: Resource buttons now send RPCs to server
     private void AddResource1Amount(ClickEvent clickEvent)
     {
         SendResourceRpc(resource1Input.value, 0);
@@ -295,6 +278,8 @@ public class TesterUI : MonoBehaviour
             resource2ToAdd = resource2ToAdd
         });
         em.AddComponentData(rpc, new SendRpcCommandRequest());
+
+        Debug.Log($"Sent resource RPC: +{resource1ToAdd} R1, +{resource2ToAdd} R2");
     }
 
     private void OnSpawnUnitClicked(ClickEvent evt)
@@ -308,37 +293,25 @@ public class TesterUI : MonoBehaviour
                 return;
             }
 
-            SendSpawnUnitRpc(selectedBuilding);
+            // Affordability check using PlayerStatsUtils
+            if (!PlayerStatsUtils.CanAfford(cachedResource1Cost, cachedResource2Cost))
+            {
+                Debug.Log("Cannot afford to spawn unit");
+                return;
+            }
+
+            // Send spawn request
+            var clientWorld = WorldManager.GetClientWorld();
+            if (clientWorld == null || !clientWorld.IsCreated) return;
+
+            var em = clientWorld.EntityManager;
+            var rpc = em.CreateEntity();
+            em.AddComponentData(rpc, new SpawnUnitFromBuildingRpc
+            {
+                buildingEntity = selectedBuilding
+            });
+            em.AddComponentData(rpc, new SendRpcCommandRequest());
+
         }
-    }
-
-    private void SendSpawnUnitRpc(Entity buildingEntity)
-    {
-        var clientWorld = WorldManager.GetClientWorld();
-        if (clientWorld == null || !clientWorld.IsCreated)
-        {
-            Debug.LogError("Client world not available for sending RPC");
-            return;
-        }
-
-        var em = clientWorld.EntityManager;
-        var rpc = em.CreateEntity();
-        em.AddComponentData(rpc, new SpawnUnitFromBuildingRpc { buildingEntity = buildingEntity });
-        em.AddComponentData(rpc, new SendRpcCommandRequest());
-    }
-
-    public void SpawnBarracksRpcRequest(Vector3 position, int owner)
-    {
-        var clientWorld = WorldManager.GetClientWorld();
-        if (clientWorld == null || !clientWorld.IsCreated) return;
-
-        var em = clientWorld.EntityManager;
-        var rpcEntity = em.CreateEntity();
-        em.AddComponentData(rpcEntity, new SpawnBarracksRpc
-        {
-            position = position,
-            owner = owner
-        });
-        em.AddComponentData(rpcEntity, new SendRpcCommandRequest());
     }
 }

@@ -38,66 +38,90 @@ public partial struct BuildingUISystem : ISystem
             }
         }
 
-        // Monitor for buildings with ENABLED Selected component
+        // FIXED: Monitor for buildings with ENABLED Selected component
         Entity currentlySelectedBuilding = Entity.Null;
         foreach (var (building, entity) in
             SystemAPI.Query<RefRO<Building>>()
-            .WithAll<Selected>()  // Only matches if Selected is enabled
+            .WithAll<Selected>()  // Only buildings that have Selected component
             .WithEntityAccess())
         {
-            currentlySelectedBuilding = entity;
-
-            if (entity != lastSelectedBuilding)
+            // CRITICAL: Check if the Selected component is actually ENABLED
+            if (state.EntityManager.IsComponentEnabled<Selected>(entity))
             {
-                lastSelectedBuilding = entity;
-                HandleBuildingSelection(ref state, entity, currentResource1, currentResource2);
+                currentlySelectedBuilding = entity;
+                break; // Should only be one selected building at a time
             }
         }
 
-        // If we had a selected building but don't anymore, it was deselected
-        if (lastSelectedBuilding != Entity.Null && currentlySelectedBuilding == Entity.Null)
+        // Handle building selection changes
+        if (currentlySelectedBuilding != lastSelectedBuilding)
         {
-            lastSelectedBuilding = Entity.Null;
-            BuildingUIEvents.RaiseBuildingDeselected();
+            // Deselect previous building if there was one
+            if (lastSelectedBuilding != Entity.Null)
+            {
+                BuildingUIEvents.RaiseBuildingDeselected();
+            }
+
+            // Select new building if there is one
+            if (currentlySelectedBuilding != Entity.Null)
+            {
+                HandleBuildingSelection(ref state, currentlySelectedBuilding, currentResource1, currentResource2);
+            }
+
+            lastSelectedBuilding = currentlySelectedBuilding;
         }
     }
 
     private void HandleBuildingSelection(ref SystemState state, Entity buildingEntity,
         int currentResource1, int currentResource2)
     {
-        // Check ownership
+        // FIXED: Check ownership using the same method as PlayerStatsUtils
         bool isOwned = false;
+        int ownerNetworkId = -999;
+        int localPlayerNetworkId = -999;
+
         if (state.EntityManager.HasComponent<GhostOwner>(buildingEntity))
         {
             var ghostOwner = state.EntityManager.GetComponentData<GhostOwner>(buildingEntity);
+            ownerNetworkId = ghostOwner.NetworkId;
 
             // Get local player network ID to compare
             if (PlayerStatsUtils.TryGetLocalPlayerStats(out var localStats))
             {
-                isOwned = ghostOwner.NetworkId == localStats.playerId;
+                localPlayerNetworkId = localStats.playerId;
+                isOwned = (ownerNetworkId == localPlayerNetworkId);
             }
         }
 
+        // UPDATED: Create event data with all required fields
         var eventData = new BuildingSelectedEventData
         {
             BuildingEntity = buildingEntity,
-            IsOwned = isOwned,
+            HasSpawnCapability = false,
             Resource1Cost = 0,
-            Resource2Cost = 0
+            Resource2Cost = 0,
+            OwnerNetworkId = ownerNetworkId,
+            LocalPlayerNetworkId = localPlayerNetworkId
         };
 
-        // Get costs if available
+        // Get spawn capability and costs
         if (state.EntityManager.HasComponent<UnitSpawnCost>(buildingEntity))
         {
+            eventData.HasSpawnCapability = true;
             var cost = state.EntityManager.GetComponentData<UnitSpawnCost>(buildingEntity);
             eventData.Resource1Cost = cost.unitResource1Cost;
             eventData.Resource2Cost = cost.unitResource2Cost;
         }
 
+        // ALWAYS raise the selection event (TesterUI will decide whether to show UI based on ownership)
         BuildingUIEvents.RaiseBuildingSelected(eventData);
 
-        // Also send cost/affordability update
-        UpdateBuildingAffordability(ref state, buildingEntity, currentResource1, currentResource2);
+        // Send affordability updates if building has spawn capability
+        if (eventData.HasSpawnCapability)
+        {
+            UpdateBuildingAffordability(ref state, buildingEntity, currentResource1, currentResource2);
+        }
+
     }
 
     private void UpdateBuildingAffordability(ref SystemState state, Entity buildingEntity,
@@ -107,26 +131,28 @@ public partial struct BuildingUISystem : ISystem
             return;
 
         var cost = state.EntityManager.GetComponentData<UnitSpawnCost>(buildingEntity);
+        bool canAfford = currentResource1 >= cost.unitResource1Cost &&
+                        currentResource2 >= cost.unitResource2Cost;
 
+        // Send spawn cost update event
         var costData = new SpawnCostUIData
         {
             BuildingEntity = buildingEntity,
             Resource1Cost = cost.unitResource1Cost,
             Resource2Cost = cost.unitResource2Cost,
-            CanAfford = currentResource1 >= cost.unitResource1Cost &&
-                       currentResource2 >= cost.unitResource2Cost
+            CanAfford = canAfford
         };
 
         BuildingUIEvents.RaiseSpawnCostUpdated(costData);
 
-        // Also update general resource UI
+        // Send general resource update event
         var resourceData = new ResourceUIData
         {
             CurrentResource1 = currentResource1,
             CurrentResource2 = currentResource2,
             RequiredResource1 = cost.unitResource1Cost,
             RequiredResource2 = cost.unitResource2Cost,
-            CanAffordCurrent = costData.CanAfford
+            CanAffordCurrent = canAfford
         };
 
         BuildingUIEvents.RaiseResourcesUpdated(resourceData);
