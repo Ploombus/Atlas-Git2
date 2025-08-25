@@ -1,19 +1,38 @@
+using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
-using Unity.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Utility class to replace ResourceManager - reads directly from networked PlayerStats
+/// IMPROVED: Utility class for accessing networked PlayerStats data
+/// Simple, reliable methods to get local player information
 /// </summary>
 public static class PlayerStatsUtils
 {
     /// <summary>
-    /// Get local player's resources directly from PlayerStats
+    /// Get local player's current resources
     /// </summary>
     public static bool TryGetLocalResources(out int resource1, out int resource2)
     {
         resource1 = resource2 = 0;
+
+        if (TryGetLocalPlayerStats(out var stats))
+        {
+            resource1 = stats.resource1;
+            resource2 = stats.resource2;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Get complete local player stats
+    /// </summary>
+    public static bool TryGetLocalPlayerStats(out PlayerStats stats)
+    {
+        stats = default;
 
         var clientWorld = GetClientWorld();
         if (clientWorld == null) return false;
@@ -21,8 +40,19 @@ public static class PlayerStatsUtils
         var localPlayerId = GetLocalPlayerId(clientWorld);
         if (localPlayerId == -1) return false;
 
-        // Find local player's PlayerStats
-        var entityManager = clientWorld.EntityManager;
+        return TryGetPlayerStatsById(clientWorld, localPlayerId, out stats);
+    }
+
+    /// <summary>
+    /// Get player stats by specific player ID
+    /// </summary>
+    public static bool TryGetPlayerStatsById(World world, int playerId, out PlayerStats stats)
+    {
+        stats = default;
+
+        if (world == null || !world.IsCreated) return false;
+
+        var entityManager = world.EntityManager;
         using var query = entityManager.CreateEntityQuery(ComponentType.ReadOnly<PlayerStats>());
 
         if (query.IsEmpty) return false;
@@ -32,10 +62,9 @@ public static class PlayerStatsUtils
 
         for (int i = 0; i < allStats.Length; i++)
         {
-            if (allStats[i].playerId == localPlayerId)
+            if (allStats[i].playerId == playerId)
             {
-                resource1 = allStats[i].resource1;
-                resource2 = allStats[i].resource2;
+                stats = allStats[i];
                 found = true;
                 break;
             }
@@ -50,15 +79,15 @@ public static class PlayerStatsUtils
     /// </summary>
     public static bool CanAfford(int resource1Cost, int resource2Cost)
     {
-        if (TryGetLocalResources(out int r1, out int r2))
+        if (TryGetLocalResources(out int currentR1, out int currentR2))
         {
-            return r1 >= resource1Cost && r2 >= resource2Cost;
+            return currentR1 >= resource1Cost && currentR2 >= resource2Cost;
         }
         return false;
     }
 
     /// <summary>
-    /// Get missing resources for a given cost
+    /// Get missing resources needed for a specific cost
     /// </summary>
     public static void GetMissingResources(int resource1Needed, int resource2Needed,
         out int missingResource1, out int missingResource2)
@@ -79,38 +108,44 @@ public static class PlayerStatsUtils
     }
 
     /// <summary>
-    /// Get local player's complete stats
+    /// Get all player stats (useful for scoreboards)
     /// </summary>
-    public static bool TryGetLocalPlayerStats(out PlayerStats stats)
+    public static List<PlayerStats> GetAllPlayerStats(World world)
     {
-        stats = default;
+        var result = new List<PlayerStats>();
 
-        var clientWorld = GetClientWorld();
-        if (clientWorld == null) return false;
+        if (world == null || !world.IsCreated) return result;
 
-        var localPlayerId = GetLocalPlayerId(clientWorld);
-        if (localPlayerId == -1) return false;
-
-        var entityManager = clientWorld.EntityManager;
+        var entityManager = world.EntityManager;
         using var query = entityManager.CreateEntityQuery(ComponentType.ReadOnly<PlayerStats>());
 
-        if (query.IsEmpty) return false;
+        if (query.IsEmpty) return result;
 
         var allStats = query.ToComponentDataArray<PlayerStats>(Allocator.Temp);
-        bool found = false;
 
         for (int i = 0; i < allStats.Length; i++)
         {
-            if (allStats[i].playerId == localPlayerId)
+            // Only include valid player data (playerId should be >= 0)
+            if (allStats[i].playerId >= 0)
             {
-                stats = allStats[i];
-                found = true;
-                break;
+                result.Add(allStats[i]);
             }
         }
 
         allStats.Dispose();
-        return found;
+        return result;
+    }
+
+    /// <summary>
+    /// Check if a specific player ID is the local player
+    /// </summary>
+    public static bool IsLocalPlayer(int playerId)
+    {
+        var clientWorld = GetClientWorld();
+        if (clientWorld == null) return false;
+
+        var localPlayerId = GetLocalPlayerId(clientWorld);
+        return localPlayerId != -1 && localPlayerId == playerId;
     }
 
     // Helper methods
@@ -132,42 +167,84 @@ public static class PlayerStatsUtils
 
         var entityManager = clientWorld.EntityManager;
 
-        // Try to find using GhostOwnerIsLocal
-        using var ghostOwnerQuery = entityManager.CreateEntityQuery(
+        // Method 1: Try GhostOwnerIsLocal (most reliable for NetCode)
+        using (var ghostOwnerQuery = entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<GhostOwner>(),
             ComponentType.ReadOnly<GhostOwnerIsLocal>()
-        );
-
-        if (!ghostOwnerQuery.IsEmpty)
+        ))
         {
-            var ghostOwners = ghostOwnerQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
-            if (ghostOwners.Length > 0)
+            if (!ghostOwnerQuery.IsEmpty)
             {
-                int localId = ghostOwners[0].NetworkId;
+                var ghostOwners = ghostOwnerQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
+                if (ghostOwners.Length > 0)
+                {
+                    var localId = ghostOwners[0].NetworkId;
+                    ghostOwners.Dispose();
+                    return localId;
+                }
                 ghostOwners.Dispose();
-                return localId;
             }
-            ghostOwners.Dispose();
         }
 
-        // Fallback: find the first NetworkStreamConnection
-        using var connectionQuery = entityManager.CreateEntityQuery(
+        // Method 2: Fallback to NetworkStreamConnection with NetworkId
+        using (var connectionQuery = entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<NetworkStreamConnection>(),
             ComponentType.ReadOnly<NetworkId>()
-        );
-
-        if (!connectionQuery.IsEmpty)
+        ))
         {
-            var networkIds = connectionQuery.ToComponentDataArray<NetworkId>(Allocator.Temp);
-            if (networkIds.Length > 0)
+            if (!connectionQuery.IsEmpty)
             {
-                var localId = networkIds[0].Value;
+                var networkIds = connectionQuery.ToComponentDataArray<NetworkId>(Allocator.Temp);
+                if (networkIds.Length > 0)
+                {
+                    var localId = networkIds[0].Value;
+                    networkIds.Dispose();
+                    return localId;
+                }
                 networkIds.Dispose();
-                return localId;
             }
-            networkIds.Dispose();
         }
 
-        return -1;
+        return -1; // No local player found
+    }
+
+    /// <summary>
+    /// Debug method to log current player stats
+    /// </summary>
+    public static void LogLocalPlayerStats()
+    {
+        if (TryGetLocalPlayerStats(out var stats))
+        {
+            Debug.Log($"Local Player Stats - ID: {stats.playerId}, " +
+                     $"R1: {stats.resource1}, R2: {stats.resource2}, " +
+                     $"Score: {stats.totalScore}");
+        }
+        else
+        {
+            Debug.Log("No local player stats available");
+        }
+    }
+
+    /// <summary>
+    /// Debug method to log all player stats
+    /// </summary>
+    public static void LogAllPlayerStats()
+    {
+        var clientWorld = GetClientWorld();
+        if (clientWorld == null)
+        {
+            Debug.Log("No client world found");
+            return;
+        }
+
+        var allStats = GetAllPlayerStats(clientWorld);
+        Debug.Log($"Found {allStats.Count} player(s) with stats:");
+
+        foreach (var stats in allStats)
+        {
+            var isLocal = IsLocalPlayer(stats.playerId);
+            Debug.Log($"Player {stats.playerId} {(isLocal ? "(LOCAL)" : "")}: " +
+                     $"R1={stats.resource1}, R2={stats.resource2}, Score={stats.totalScore}");
+        }
     }
 }

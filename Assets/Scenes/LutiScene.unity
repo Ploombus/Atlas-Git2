@@ -130,7 +130,6 @@ GameObject:
   - component: {fileID: 539509626}
   - component: {fileID: 539509625}
   - component: {fileID: 539509627}
-  - component: {fileID: 539509628}
   m_Layer: 0
   m_Name: ScoreboardUI
   m_TagString: Untagged
@@ -183,7 +182,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 539509624}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dbe05f6133f415e4bbfc6e3db8dc8008, type: 3}
   m_Name: 
@@ -191,18 +190,6 @@ MonoBehaviour:
   uiDocument: {fileID: 539509625}
   showScoreboard: 1
   updateInterval: 0.5
---- !u!114 &539509628
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 539509624}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37bc455eefa5b70449d0f91b190e2b9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ScoreboardECSBridge
 --- !u!1 &1472135022
 GameObject:
   m_ObjectHideFlags: 0
@@ -256,10 +243,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1934803233}
-  - component: {fileID: 1934803232}
   - component: {fileID: 1934803231}
+  - component: {fileID: 1934803234}
   m_Layer: 0
-  m_Name: TesterUI
+  m_Name: BuildingUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -288,19 +275,6 @@ MonoBehaviour:
   m_PivotReferenceSize: 0
   m_Pivot: 0
   m_WorldSpaceCollider: {fileID: 0}
---- !u!114 &1934803232
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1934803230}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a3df923d0e78ceb4ba090ba971bf7ee7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TesterUI
-  _TesterUI: {fileID: 1934803231}
 --- !u!4 &1934803233
 Transform:
   m_ObjectHideFlags: 0
@@ -316,6 +290,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1934803234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1934803230}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f47553690a6d8fb44a2913fc060c388e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingUI
+  _BuildingUI: {fileID: 1934803231}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

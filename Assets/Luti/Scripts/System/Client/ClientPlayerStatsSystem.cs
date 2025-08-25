@@ -1,10 +1,6 @@
 using Unity.Entities;
 using Unity.NetCode;
 
-/// <summary>
-/// SIMPLIFIED: Client system that only triggers UI events when PlayerStats change
-/// No ResourceManager syncing needed - UI reads directly from PlayerStats
-/// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial struct ClientPlayerStatsSystem : ISystem
@@ -16,10 +12,9 @@ public partial struct ClientPlayerStatsSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
-        // Get local player stats
         if (!PlayerStatsUtils.TryGetLocalPlayerStats(out var currentStats))
         {
-            return; // No local player stats available yet
+            return; 
         }
 
         // Check if this is the first time or if values changed
@@ -50,9 +45,6 @@ public partial struct ClientPlayerStatsSystem : ISystem
     }
 }
 
-/// <summary>
-/// Static events for UI communication (unchanged)
-/// </summary>
 public static class PlayerStatsUIEvents
 {
     public static System.Action<int, int, int, int, int> OnLocalStatsChanged; // r1, r2, totalScore, r1Score, r2Score

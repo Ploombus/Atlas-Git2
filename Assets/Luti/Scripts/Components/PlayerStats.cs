@@ -2,11 +2,6 @@ using Unity.Entities;
 using Unity.NetCode;
 
 
-/// <summary>
-/// FIXED: Now replicates to all clients for cross-player visibility
-/// Simple Ghost component approach - server authoritative, visible to all
-/// FIXED: Removed problematic SendToOwner parameter - using default behavior
-/// </summary>
 [GhostComponent(PrefabType = GhostPrefabType.All)]
 public struct PlayerStats : IComponentData
 {
@@ -14,12 +9,10 @@ public struct PlayerStats : IComponentData
     [GhostField] public int resource1;
     [GhostField] public int resource2;
 
-    // Lifetime scores (for leaderboard display)
     [GhostField] public int totalScore;
     [GhostField] public int resource1Score;
     [GhostField] public int resource2Score;
 
-    // Player identifier for display
     [GhostField] public int playerId;
 
     // For display purposes - shows current resources in scoreboard
@@ -34,15 +27,6 @@ public struct SyncResourcesRpc : IRpcCommand
     public int resource2;
 }
 
-public struct AddResourcesRpc : IRpcCommand
-{
-    public int resource1ToAdd;
-    public int resource2ToAdd;
-}
-
-/// <summary>
-/// Configuration for score calculation
-/// </summary>
 public struct StatsConfig : IComponentData
 {
     public int pointsPerResource1;
@@ -50,14 +34,11 @@ public struct StatsConfig : IComponentData
 
     public static StatsConfig Default => new StatsConfig
     {
-        pointsPerResource1 = 10,
-        pointsPerResource2 = 10
+        pointsPerResource1 = 1,
+        pointsPerResource2 = 1
     };
 }
 
-/// <summary>
-/// Events for triggering score updates
-/// </summary>
 public struct StatsChangeEvent : IComponentData
 {
     public int resource1Delta;
@@ -67,7 +48,7 @@ public struct StatsChangeEvent : IComponentData
 }
 public struct PlayerStatsEntity : IComponentData
 {
-    public Entity Value; // FIXED: Changed from "Entity" to "Value" to match your existing code usage
+    public Entity Value;
 }
 public struct DirectScoreEvent : IComponentData
 {

@@ -113,7 +113,7 @@ public partial struct BuildingUISystem : ISystem
             eventData.Resource2Cost = cost.unitResource2Cost;
         }
 
-        // ALWAYS raise the selection event (TesterUI will decide whether to show UI based on ownership)
+        // ALWAYS raise the selection event (BuildingUI will decide whether to show UI based on ownership)
         BuildingUIEvents.RaiseBuildingSelected(eventData);
 
         // Send affordability updates if building has spawn capability

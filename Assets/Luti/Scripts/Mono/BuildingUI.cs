@@ -4,11 +4,11 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using Managers;
 
-public class TesterUI : MonoBehaviour
+public class BuildingUI : MonoBehaviour
 {
-    public static TesterUI Instance { get; private set; }
+    public static BuildingUI Instance { get; private set; }
 
-    [SerializeField] private UIDocument _TesterUI;
+    [SerializeField] private UIDocument _BuildingUI;
     // REMOVED: public ResourceManager resourceManager; // DELETE THIS LINE FROM SCENE AND COMPONENT
 
     // UI Elements
@@ -48,16 +48,16 @@ public class TesterUI : MonoBehaviour
 
     private void InitializeUI()
     {
-        if (_TesterUI == null)
+        if (_BuildingUI == null)
         {
-            Debug.LogError("TesterUI: UIDocument is null!");
+            Debug.LogError("BuildingUI: UIDocument is null!");
             return;
         }
 
-        var root = _TesterUI.rootVisualElement;
+        var root = _BuildingUI.rootVisualElement;
         if (root == null)
         {
-            Debug.LogError("TesterUI: Root visual element is null!");
+            Debug.LogError("BuildingUI: Root visual element is null!");
             return;
         }
 
@@ -224,7 +224,7 @@ public class TesterUI : MonoBehaviour
 
     public IPanel GetRootPanel()
     {
-        return _TesterUI?.rootVisualElement?.panel;
+        return _BuildingUI?.rootVisualElement?.panel;
     }
 
     // UI Actions

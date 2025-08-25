@@ -2,23 +2,18 @@ using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;
 
-/// <summary>
-/// Authoring component for PlayerStats Ghost prefab
-/// This bakes to create a networked PlayerStats entity
-/// </summary>
 public class PlayerStatsAuthoring : MonoBehaviour
 {
     [Header("Starting Values")]
-    [SerializeField] private int startingResource1 = 100;
-    [SerializeField] private int startingResource2 = 100;
+    [SerializeField] private int startingResource1 = 0;
+    [SerializeField] private int startingResource2 = 0;
 
     class Baker : Baker<PlayerStatsAuthoring>
     {
         public override void Bake(PlayerStatsAuthoring authoring)
         {
-            var entity = GetEntity(TransformUsageFlags.None); // No transform needed for stats
+            var entity = GetEntity(TransformUsageFlags.None); 
 
-            // Add PlayerStats component - this will be replicated via Ghost system
             AddComponent(entity, new PlayerStats
             {
                 resource1 = authoring.startingResource1,
@@ -26,10 +21,9 @@ public class PlayerStatsAuthoring : MonoBehaviour
                 totalScore = 0,
                 resource1Score = 0,
                 resource2Score = 0,
-                playerId = -1 // Will be set by server when spawned
+                playerId = -1 // stays -1 if not overwritten by server
             });
 
-            // GhostOwner will be added by the server when spawning
         }
     }
 }

@@ -135,17 +135,22 @@ public partial struct GatheringServerSystem : ISystem
                             if (SystemAPI.HasComponent<GhostOwner>(unitEnt))
                             {
                                 int ownerId = SystemAPI.GetComponent<GhostOwner>(unitEnt).NetworkId;
-                                if (idToConn.TryGetValue(ownerId, out var conn) && SystemAPI.HasComponent<PlayerStats>(conn))
+                                if (idToConn.TryGetValue(ownerId, out var conn))
                                 {
-                                    ServerPlayerStatsSystem.TriggerStatsChange(ecb, conn,
-                                    resource1Delta: 1,
-                                    resource2Delta: 0,
-                                    awardScorePoints: true);
+                                    // Create StatsChangeEvent entity to award resources
+                                    var eventEntity = ecb.CreateEntity();
+                                    ecb.AddComponent(eventEntity, new StatsChangeEvent
+                                    {
+                                        resource1Delta = 1,      // Award 1 wood (resource1)
+                                        resource2Delta = 0,      // No resource2 from trees
+                                        playerConnection = conn,
+                                        awardScorePoints = true  // Give score points for gathering
+                                    });
                                 }
                             }
 
-                            // Despawn on depletion
-                            if (t.woodLeft == 0)
+                                // Despawn on depletion
+                                if (t.woodLeft == 0)
                             {
                                 // Mark so later units in this same frame won't touch it
                                 treesPendingDestroy.TryAdd(treeEnt, 1);

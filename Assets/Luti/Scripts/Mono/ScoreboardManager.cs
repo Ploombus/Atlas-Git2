@@ -1,13 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Unity.Collections;
 
-/// <summary>
-/// SIMPLIFIED: ScoreboardManager that reads directly from PlayerStats - no ResourceManager needed
-/// </summary>
 public class ScoreboardManager : MonoBehaviour
 {
     public static ScoreboardManager Instance { get; private set; }
@@ -25,7 +22,7 @@ public class ScoreboardManager : MonoBehaviour
     private Label resource2Display;
     private VisualElement playersContainer;
 
-    // Simple tracking
+    // Tracking
     private float lastUpdateTime;
     private World clientWorld;
 
@@ -38,6 +35,7 @@ public class ScoreboardManager : MonoBehaviour
         else
         {
             Destroy(gameObject);
+            return;
         }
     }
 
@@ -45,6 +43,7 @@ public class ScoreboardManager : MonoBehaviour
     {
         InitializeUI();
         FindClientWorld();
+
         PlayerStatsUIEvents.OnAllPlayerStatsUpdated += ForceUpdateDisplay;
     }
 
@@ -62,16 +61,17 @@ public class ScoreboardManager : MonoBehaviour
     {
         if (!showScoreboard) return;
 
+        // Update at regular intervals
         if (Time.time - lastUpdateTime >= updateInterval)
         {
-            UpdateStatsDisplay();
+            UpdateScoreboardDisplay();
             lastUpdateTime = Time.time;
         }
     }
 
     private void ForceUpdateDisplay()
     {
-        UpdateStatsDisplay();
+        UpdateScoreboardDisplay();
     }
 
     private void InitializeUI()
@@ -79,10 +79,18 @@ public class ScoreboardManager : MonoBehaviour
         if (uiDocument == null)
         {
             Debug.LogError("ScoreboardManager: UIDocument is null!");
+            enabled = false;
             return;
         }
 
         var root = uiDocument.rootVisualElement;
+        if (root == null)
+        {
+            Debug.LogError("ScoreboardManager: Root visual element is null!");
+            enabled = false;
+            return;
+        }
+
         scoreboardContainer = root.Q<VisualElement>("scoreboard-container");
         resource1Display = root.Q<Label>("resource1-display");
         resource2Display = root.Q<Label>("resource2-display");
@@ -90,7 +98,8 @@ public class ScoreboardManager : MonoBehaviour
 
         if (scoreboardContainer == null)
         {
-            Debug.LogError("ScoreboardManager: Missing scoreboard-container!");
+            Debug.LogError("ScoreboardManager: Missing required UI elements in UXML!");
+            enabled = false;
             return;
         }
 
@@ -107,124 +116,178 @@ public class ScoreboardManager : MonoBehaviour
                 break;
             }
         }
+
+        if (clientWorld == null)
+        {
+            Debug.LogWarning("ScoreboardManager: No client world found!");
+        }
     }
 
-    /// <summary>
-    /// SIMPLIFIED: Read everything directly from PlayerStats - no ResourceManager needed
-    /// </summary>
-    private void UpdateStatsDisplay()
+    private void UpdateScoreboardDisplay()
     {
-        if (clientWorld == null || !clientWorld.IsCreated) return;
+        if (clientWorld == null || !clientWorld.IsCreated)
+        {
+            DisplayFallbackValues();
+            return;
+        }
 
+        var allPlayerStats = GetAllPlayerStats();
+        if (allPlayerStats == null || allPlayerStats.Count == 0)
+        {
+            DisplayFallbackValues();
+            return;
+        }
+
+        UpdateLocalPlayerResources(allPlayerStats);
+
+        UpdatePlayersScoreboard(allPlayerStats);
+    }
+
+    private List<PlayerStatsData> GetAllPlayerStats()
+    {
         var entityManager = clientWorld.EntityManager;
 
-        // Clear players container
-        playersContainer?.Clear();
-
-        // Query PlayerStats entities
         using var query = entityManager.CreateEntityQuery(ComponentType.ReadOnly<PlayerStats>());
 
         if (query.IsEmpty)
         {
-            // Show fallback values
-            if (resource1Display != null) resource1Display.text = "?";
-            if (resource2Display != null) resource2Display.text = "?";
-            return;
+            return null;
         }
 
-        var allStats = query.ToComponentDataArray<PlayerStats>(Allocator.Temp);
+        var statsArray = query.ToComponentDataArray<PlayerStats>(Allocator.Temp);
+        var playerDataList = new List<PlayerStatsData>();
+
         var localPlayerId = GetLocalPlayerId();
 
-        // Find local player and update resources
-        PlayerStats localPlayerStats = default;
-        bool hasLocalPlayer = false;
-
-        // Create player list for scoring
-        var playerDisplayData = new List<(PlayerStats stats, bool isLocal)>();
-
-        for (int i = 0; i < allStats.Length; i++)
+        for (int i = 0; i < statsArray.Length; i++)
         {
-            var stats = allStats[i];
-            bool isLocal = (stats.playerId == localPlayerId);
+            var stats = statsArray[i];
 
-            if (isLocal)
+            if (stats.playerId >= 0)
             {
-                localPlayerStats = stats;
-                hasLocalPlayer = true;
-            }
+                var playerData = new PlayerStatsData
+                {
+                    stats = stats,
+                    isLocalPlayer = (stats.playerId == localPlayerId)
+                };
 
-            playerDisplayData.Add((stats, isLocal));
+                playerDataList.Add(playerData);
+            }
         }
 
-        // Update resource displays from local player stats
-        if (hasLocalPlayer)
+        statsArray.Dispose();
+        return playerDataList;
+    }
+
+    private void UpdateLocalPlayerResources(List<PlayerStatsData> allPlayerStats)
+    {
+        // Find local player's data
+        PlayerStats? localStats = null;
+
+        foreach (var playerData in allPlayerStats)
         {
-            if (resource1Display != null) resource1Display.text = localPlayerStats.resource1.ToString();
-            if (resource2Display != null) resource2Display.text = localPlayerStats.resource2.ToString();
+            if (playerData.isLocalPlayer)
+            {
+                localStats = playerData.stats;
+                break;
+            }
+        }
+
+        if (localStats.HasValue)
+        {
+            // Display current resource values
+            if (resource1Display != null)
+                resource1Display.text = localStats.Value.resource1.ToString();
+
+            if (resource2Display != null)
+                resource2Display.text = localStats.Value.resource2.ToString();
         }
         else
         {
-            // No local player found
+            // No local player found - show question marks
             if (resource1Display != null) resource1Display.text = "?";
             if (resource2Display != null) resource2Display.text = "?";
         }
-
-        // Sort by total score (descending) - highest score first
-        playerDisplayData.Sort((a, b) => b.stats.totalScore.CompareTo(a.stats.totalScore));
-
-        // Create player score entries (max 2 players)
-        int playerCount = 0;
-        foreach (var (stats, isLocal) in playerDisplayData)
-        {
-            if (playerCount >= 2) break;
-
-            CreatePlayerScoreEntry(stats, isLocal, playerCount + 1);
-            playerCount++;
-        }
-
-        allStats.Dispose();
     }
 
-    private void CreatePlayerScoreEntry(PlayerStats stats, bool isLocal, int position)
+    private void UpdatePlayersScoreboard(List<PlayerStatsData> allPlayerStats)
+    {
+        // Clear existing entries
+        if (playersContainer != null)
+        {
+            playersContainer.Clear();
+        }
+        else
+        {
+            return;
+        }
+
+        // Sort players by total score (descending - highest first)
+        allPlayerStats.Sort((a, b) => b.stats.totalScore.CompareTo(a.stats.totalScore));
+
+        // Display up to 4 players (or however many you want)
+        int maxPlayersToShow = Mathf.Min(4, allPlayerStats.Count);
+
+        for (int i = 0; i < maxPlayersToShow; i++)
+        {
+            var playerData = allPlayerStats[i];
+            CreatePlayerScoreEntry(playerData.stats, playerData.isLocalPlayer, i + 1);
+        }
+    }
+
+    private void CreatePlayerScoreEntry(PlayerStats stats, bool isLocalPlayer, int position)
     {
         var playerEntry = new VisualElement();
         playerEntry.AddToClassList("player-entry");
-        if (isLocal) playerEntry.AddToClassList("local-player");
 
-        string playerName = isLocal ? "You" : $"Player {stats.playerId}";
-        var playerLabel = new Label($"{playerName}: {stats.totalScore}");
+        if (isLocalPlayer)
+        {
+            playerEntry.AddToClassList("local-player");
+        }
+
+        // Create player name and score text
+        string playerName = isLocalPlayer ? "You" : $"Player {stats.playerId}";
+        string scoreText = $"{playerName}: {stats.totalScore}";
+
+        var playerLabel = new Label(scoreText);
         playerLabel.AddToClassList("player-score");
-        if (position == 1) playerLabel.AddToClassList("first-place");
+
+        // Highlight first place
+        if (position == 1)
+        {
+            playerLabel.AddToClassList("first-place");
+        }
 
         playerEntry.Add(playerLabel);
-        playersContainer?.Add(playerEntry);
+        playersContainer.Add(playerEntry);
     }
 
     private int GetLocalPlayerId()
     {
-        if (clientWorld == null || !clientWorld.IsCreated) return -1;
+        if (clientWorld == null || !clientWorld.IsCreated)
+            return -1;
 
         var entityManager = clientWorld.EntityManager;
 
-        // First try to find using GhostOwnerIsLocal
-        using var ghostOwnerQuery = entityManager.CreateEntityQuery(
+        // Method 1: Try using GhostOwnerIsLocal (most reliable)
+        using var ghostQuery = entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<GhostOwner>(),
             ComponentType.ReadOnly<GhostOwnerIsLocal>()
         );
 
-        if (!ghostOwnerQuery.IsEmpty)
+        if (!ghostQuery.IsEmpty)
         {
-            var ghostOwners = ghostOwnerQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
+            var ghostOwners = ghostQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
             if (ghostOwners.Length > 0)
             {
-                int localId = ghostOwners[0].NetworkId;
+                var localId = ghostOwners[0].NetworkId;
                 ghostOwners.Dispose();
                 return localId;
             }
             ghostOwners.Dispose();
         }
 
-        // Fallback
+        // Method 2: Fallback to NetworkStreamConnection
         using var connectionQuery = entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<NetworkStreamConnection>(),
             ComponentType.ReadOnly<NetworkId>()
@@ -242,7 +305,19 @@ public class ScoreboardManager : MonoBehaviour
             networkIds.Dispose();
         }
 
-        return -1;
+        return -1; // No local player ID found
+    }
+
+    private void DisplayFallbackValues()
+    {
+        if (resource1Display != null) resource1Display.text = "?";
+        if (resource2Display != null) resource2Display.text = "?";
+
+        // Clear players list
+        if (playersContainer != null)
+        {
+            playersContainer.Clear();
+        }
     }
 
     public void SetScoreboardVisibility(bool visible)
@@ -257,5 +332,11 @@ public class ScoreboardManager : MonoBehaviour
     public void ToggleScoreboard()
     {
         SetScoreboardVisibility(!showScoreboard);
+    }
+
+    private struct PlayerStatsData
+    {
+        public PlayerStats stats;
+        public bool isLocalPlayer;
     }
 }

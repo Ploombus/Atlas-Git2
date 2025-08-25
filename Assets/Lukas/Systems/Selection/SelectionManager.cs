@@ -64,7 +64,7 @@ public class SelectionManager : MonoBehaviour
                     // If it's a building that was selected, hide UI
                     if (entityManager.HasComponent<Building>(entityArray[i]) && entityManager.IsComponentEnabled<Selected>(entityArray[i]))
                     {
-                        TesterUI.Instance.HideBuildingUI();
+                        BuildingUI.Instance.HideBuildingUI();
                     }
                     entityManager.SetComponentEnabled<Selected>(entityArray[i], false);
                 }
@@ -273,7 +273,7 @@ public class SelectionManager : MonoBehaviour
                             // If this entity is a building, show its UI (your original behavior)
                             if (entityManager.HasComponent<Building>(e))
                             {
-                                TesterUI.Instance.ShowBuildingUI(e);
+                                BuildingUI.Instance.ShowBuildingUI(e);
                             }
                         }
                     }
