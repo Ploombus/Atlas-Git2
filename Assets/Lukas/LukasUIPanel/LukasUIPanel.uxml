@@ -1,0 +1,27 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Lukas/LukasUIPanel/LukasUIStyle.uss?fileID=7433441132597879392&amp;guid=3f654f562cef53344b554b4177b45b02&amp;type=3#LukasUIStyle" />
+    <ui:VisualElement name="UIPanel" class="panel">
+        <ui:Button name="LockFormation" class="panelbutton" style="background-image: resource(&apos;Png/Unlock&apos;);" />
+        <ui:Button name="Formations" class="panelbutton" style="background-image: resource(&apos;Png/TightFormation&apos;);" />
+        <ui:VisualElement name="Divider" class="divider" style="flex-grow: 1;" />
+        <ui:Button name="SpawnUnit" class="panelbutton">
+            <ui:Label text="Spawn&#10;Unit" parse-escape-sequences="false" class="buttontext" style="flex-wrap: nowrap;" />
+        </ui:Button>
+        <ui:Button name="SpawnEnemy" class="panelbutton">
+            <ui:Label text="Spawn&#10;Enemy" class="buttontext" style="flex-wrap: nowrap;" />
+        </ui:Button>
+        <ui:VisualElement name="Divider" class="divider" style="flex-grow: 1;" />
+        <ui:Button name="AttackMove" class="panelbutton" style="background-image: resource(&apos;Png/Attack-01&apos;);" />
+        <ui:VisualElement name="StancesContainer" style="margin-top: 2px; margin-right: 4px; margin-bottom: 2px; margin-left: 4px; min-width: 120px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; align-items: center; display: none;">
+            <ui:Button name="Aggressive" class="stancebutton panelbutton">
+                <ui:Label text="Aggressive" parse-escape-sequences="false" name="StancesLabel" class="buttontext" style="flex-wrap: nowrap; font-size: 10px; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;" />
+            </ui:Button>
+            <ui:Button name="Defensive" class="panelbutton stancebutton">
+                <ui:Label text="Defensive" parse-escape-sequences="false" name="StancesLabel" class="buttontext" style="flex-wrap: nowrap; font-size: 10px; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;" />
+            </ui:Button>
+            <ui:Button name="StandGround" class="panelbutton stancebutton">
+                <ui:Label text="Stand Ground" parse-escape-sequences="false" name="StancesLabel" class="buttontext" style="flex-wrap: nowrap; font-size: 10px; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;" />
+            </ui:Button>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

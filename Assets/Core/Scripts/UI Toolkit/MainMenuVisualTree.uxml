@@ -1,0 +1,61 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Toolkit/MainMenuStyle.uss?fileID=7433441132597879392&amp;guid=c6361d77c615a91479d1e68055a960aa&amp;type=3#MainMenuStyle" />
+    <ui:VisualElement name="Body" style="flex-grow: 1; background-image: url(&quot;project://database/Assets/Images/angel.jpg?fileID=2800000&amp;guid=c6800fe1d88e55d4d8f6a521933be60d&amp;type=3#angel&quot;); position: relative;">
+        <ui:VisualElement name="MainMenu" class="container" style="flex-grow: 1; display: flex;">
+            <ui:Button text="Play" name="PlayButton" class="button centralButton" />
+            <ui:Button text="Exit&#10;" name="ExitButton" class="button centralButton" />
+        </ui:VisualElement>
+        <ui:VisualElement name="PlayMenu" class="container" style="flex-grow: 1; display: none; width: 100%;">
+            <ui:Button text="Host" name="HostButton" class="button centralButton" />
+            <ui:Button text="Join" name="JoinButton" class="button centralButton" />
+            <ui:Button text="Back" name="BackToMainButton" class="button centralButton" />
+            <ui:VisualElement name="HostPopup" enabled="true" class="popup" style="flex-grow: 1; align-self: center; position: absolute; display: none;">
+                <ui:VisualElement name="Container" class="popupcontainer" style="flex-grow: 1; position: absolute; height: 380px;">
+                    <ui:Label text="Host new lobby:" class="header" style="margin-top: 0; margin-right: 0; margin-bottom: 10px; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; font-size: 38px;" />
+                    <ui:TextField placeholder-text="Lobby Name..." name="LobbyNameInput" class="joinInput" style="-unity-background-image-tint-color: rgb(255, 255, 255);" />
+                    <ui:VisualElement name="ButtonsFlex" style="flex-grow: 1; flex-direction: row; justify-content: center; height: 100px; align-content: center; align-self: center; max-height: 100px;">
+                        <ui:Button text="Back" name="BackHostPopupButton" class="button smallButton" />
+                        <ui:Button text="Create Lobby" name="CreateLobbyButton" class="button smallButton" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="JoinMenu" class="container" style="flex-grow: 1; display: none; width: 100%;">
+            <ui:Label text="Active Lobbies" class="header" style="padding-bottom: 10px;" />
+            <ui:ScrollView name="LobbyList" style="align-self: center; height: 300px; margin-top: 50px; margin-right: 50px; margin-bottom: 50px; margin-left: 50px; background-color: rgba(0, 0, 0, 0.59); width: 1000px; color: rgb(255, 255, 255); font-size: 24px;" />
+            <ui:VisualElement name="ButtonsFlex2" style="flex-grow: 1; flex-direction: row; justify-content: center; align-items: center; max-height: 160px;">
+                <ui:Button text="Join with IP Adress" name="JoinAdressButton" class="button centralButton" style="display: none;" />
+                <ui:Button text="Join with Room Code" name="JoinCodeButton" class="button centralButton" />
+            </ui:VisualElement>
+            <ui:VisualElement name="ButtonsFlex" style="flex-grow: 1; flex-direction: row; justify-content: center; height: 100px; align-content: center; align-self: center; max-height: 100px;">
+                <ui:Button text="Back" name="BackToPlayButton" class="button centralButton smallButton" />
+                <ui:Button text="Refresh" name="RefreshButton" class="button centralButton smallButton" />
+            </ui:VisualElement>
+            <ui:VisualElement name="AdressPopup" class="popup" style="flex-grow: 1; align-self: center; position: absolute; display: none;">
+                <ui:VisualElement name="Container" class="popupcontainer" style="flex-grow: 1; position: absolute;">
+                    <ui:TextField placeholder-text="Enter IP Adress..." name="IPAdressField" class="joinInput" style="-unity-background-image-tint-color: rgb(255, 255, 255);" />
+                    <ui:VisualElement name="ButtonsFlex" style="flex-grow: 1; flex-direction: row; justify-content: center; height: 100px; align-content: center; align-self: center; max-height: 100px;">
+                        <ui:Button text="Back" name="BackPopupButton" class="button smallButton" />
+                        <ui:Button text="Join" name="JoinLobbyAdressButton" class="button smallButton" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="CodePopup" class="popup" style="flex-grow: 1; align-self: center; position: absolute; display: none;">
+                <ui:VisualElement name="Container" class="popupcontainer" style="flex-grow: 1; position: absolute;">
+                    <ui:TextField placeholder-text="Enter Room Code..." name="CodeField" class="joinInput" style="-unity-background-image-tint-color: rgb(255, 255, 255);" />
+                    <ui:VisualElement name="ButtonsFlex" style="flex-grow: 1; flex-direction: row; justify-content: center; height: 100px; align-content: center; align-self: center; max-height: 100px;">
+                        <ui:Button text="Back" name="BackPopupButton" class="button smallButton" />
+                        <ui:Button text="Join" name="JoinLobbyCodeButton" class="button smallButton" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="Lobby" enabled="true" class="container" style="flex-grow: 1; display: none;">
+            <ui:Label text="Lobby" name="LobbyName" class="header" style="padding-bottom: 10px;" />
+            <ui:Label text="xxxxxx" name="LobbyCodeLabel" style="color: rgb(255, 255, 255); -unity-text-align: upper-center; font-size: 32px;" />
+            <ui:ScrollView name="JoinedPlayersList" style="height: 300px; margin-top: 50px; margin-right: 50px; margin-bottom: 50px; margin-left: 50px; background-color: rgba(0, 0, 0, 0.64); font-size: 24px; color: rgb(255, 255, 255);" />
+            <ui:Button text="Start Game" name="StartGameButton" class="button centralButton" />
+            <ui:Button text="Leave Lobby" name="LeaveLobbyButton" class="button centralButton" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

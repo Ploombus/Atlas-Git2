@@ -1,0 +1,10 @@
+:root {
+}
+
+#unity-text-input {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-width: 0;
+    --unity-cursor-color: rgb(255, 255, 255);
+    padding: 2px;
+}

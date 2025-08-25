@@ -1,0 +1,25 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Luti/UI/UIStyle.uss?fileID=7433441132597879392&amp;guid=8329185003e2be148aa0e0d66f1e8b99&amp;type=3#UIStyle" />
+    <ui:VisualElement enabled="true" style="height: 100%; width: 0%;">
+        <ui:Foldout text="&#10;" enabled="true" toggle-on-label-click="true" value="false" style="position: absolute; top: 60px;">
+            <ui:Button text="Place Spawner" name="SpawnerButton" class="SpawnerButton" style="bottom: auto; position: absolute; transform-origin: right; left: auto; top: auto; align-content: flex-start; align-self: auto; justify-content: flex-start;" />
+            <ui:Label text="Costs 10 of both resources" parse-escape-sequences="false" double-click-selects-word="false" triple-click-selects-line="false" enable-rich-text="true" style="position: absolute; left: 140px; bottom: auto; top: 0; width: 123px; height: 60px; flex-wrap: wrap; flex-direction: column; white-space: pre-wrap;" />
+            <ui:Button text="Add Resource1" name="AddResource1" style="bottom: auto; position: absolute; transform-origin: right; left: auto; top: 50px; align-content: flex-start; align-self: auto; justify-content: flex-start;" />
+            <ui:IntegerField value="10" name="Resource1Input" hide-placeholder-on-focus="false" style="top: 50px; left: 130px; justify-content: space-between; align-items: auto; align-content: center; align-self: flex-start;" />
+            <ui:Label text="Add amount of Resource1" parse-escape-sequences="false" double-click-selects-word="false" triple-click-selects-line="false" style="position: absolute; left: 180px; bottom: auto; top: 47px; width: 123px; height: 60px; flex-wrap: wrap; flex-direction: column; white-space: pre-wrap;" />
+            <ui:Button text="Add Resource2" name="AddResource2" style="bottom: auto; position: absolute; transform-origin: right; left: auto; top: 100px; align-content: flex-start; align-self: auto; justify-content: flex-start;" />
+            <ui:IntegerField value="10" name="Resource2Input" style="top: 57px; left: 130px; justify-content: space-between; align-items: auto; align-content: center; align-self: flex-start;" />
+            <ui:Label text="Add amount of Resource1" parse-escape-sequences="false" double-click-selects-word="false" triple-click-selects-line="false" style="position: absolute; left: 180px; bottom: auto; top: 97px; width: 123px; height: 60px; flex-wrap: wrap; flex-direction: column; white-space: pre-wrap;" />
+        </ui:Foldout>
+        <ui:VisualElement name="BuildingUIPanel" class="BottomPanel hide" style="height: 220px; width: 400px; visibility: visible; display: flex; position: absolute; align-items: flex-start; align-self: auto; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center;">
+            <ui:Button triple-click-selects-line="false" double-click-selects-word="false" enabled="true" selectable="false" focusable="true" text="Base Unit" name="UnitButton" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+            <ui:Button text="Button" name="PH" class="BottomPanelButton" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,79 @@
+:root {
+}
+
+#unity-text-input {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-width: 0;
+    --unity-cursor-color: rgb(255, 255, 255);
+    padding: 2px;
+}
+
+.panel {
+    bottom: 0;
+    width: auto;
+    height: auto;
+    background-color: rgba(32, 17, 0, 0.64);
+    position: absolute;
+    align-self: center;
+    margin-top: 20px;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    padding-top: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
+    padding-left: 20px;
+    flex-direction: row;
+    align-content: auto;
+    justify-content: center;
+}
+
+.panelbutton {
+    width: 80px;
+    height: 80px;
+    background-color: rgb(59, 50, 42);
+    border-left-color: rgba(130, 121, 116, 0.48);
+    border-right-color: rgba(130, 121, 116, 0.48);
+    border-top-color: rgba(130, 121, 116, 0.48);
+    border-bottom-color: rgba(130, 121, 116, 0.48);
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    border-top-width: 3px;
+    border-right-width: 3px;
+    border-bottom-width: 3px;
+    border-left-width: 3px;
+    justify-content: center;
+}
+
+.panelbutton:hover {
+    border-color: rgba(255, 255, 255, 0.48);
+}
+
+.divider {
+    width: 5px;
+    background-color: rgb(255, 255, 255);
+    margin-top: 0;
+    margin-right: 20px;
+    margin-bottom: 0;
+    margin-left: 20px;
+}
+
+.buttontext {
+    -unity-font-style: bold;
+    font-size: 14px;
+    -unity-text-align: upper-center;
+}
+
+.stancebutton {
+    min-width: 114px;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 2px;
+    margin-left: 0;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    max-height: 25px;
+}

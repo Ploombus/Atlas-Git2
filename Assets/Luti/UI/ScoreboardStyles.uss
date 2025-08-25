@@ -1,0 +1,93 @@
+:root {
+}
+.scoreboard-panel {
+    background-color: rgba(0, 0, 0, 0.85);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 255, 255, 0.3);
+    border-right-color: rgba(255, 255, 255, 0.3);
+    border-top-color: rgba(255, 255, 255, 0.3);
+    border-bottom-color: rgba(255, 255, 255, 0.3);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    min-width: 200px;
+    max-width: 250px;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+/* Resources section at top */
+.resources-section {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+/* VARIATION 1: Blue and Orange */
+.resource1-display {
+    background-color: rgba(0, 150, 255, 0.8); /* Blue background */
+    color: rgb(255, 255, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    -unity-text-align: middle-center;
+    min-width: 40px;
+}
+
+.resource2-display {
+    background-color: rgba(255, 140, 0, 0.8); /* Orange background */
+    color: rgb(255, 255, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    -unity-text-align: middle-center;
+    min-width: 40px;
+}
+
+/* Players section */
+.players-container {
+    flex-direction: column;
+}
+
+.player-entry {
+    margin-bottom: 8px;
+}
+
+.player-score {
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.first-place {
+    color: rgb(255, 215, 0); /* Gold for first place */
+}
+
+.local-player .player-score {
+    color: rgb(100, 255, 100); /* Light green for local player */
+}

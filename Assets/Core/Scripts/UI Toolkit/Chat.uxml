@@ -1,0 +1,13 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Toolkit/ChatStyle.uss?fileID=7433441132597879392&amp;guid=da2e5b06bd551dd4da4be4f17bffa925&amp;type=3#ChatStyle" />
+    <ui:VisualElement name="Chat" style="flex-grow: 1; width: 700px; height: 300px; position: absolute; background-color: rgba(255, 255, 255, 0); top: auto; left: 30px; bottom: 30px; display: none; font-size: 14px;">
+        <ui:ScrollView name="LogScrollView" style="background-color: rgba(0, 0, 0, 0.39); -unity-slice-type: sliced; flex-direction: column; height: 270px; color: rgb(255, 255, 255);">
+            <ui:VisualElement name="LogContainer" style="flex-grow: 1;" />
+        </ui:ScrollView>
+        <ui:VisualElement name="InputBar" style="flex-grow: 1; flex-direction: row; flex-wrap: nowrap;">
+            <ui:Button text="Send" name="SendButton" style="background-color: rgb(61, 61, 61); -unity-font-style: bold; color: rgb(255, 255, 255); padding-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; width: 100px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;" />
+            <ui:TextField name="InputField" style="height: 30px; background-color: rgba(255, 255, 255, 0); margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; flex-direction: row; width: 600px; font-size: 18px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:ScrollView name="OnlineList" style="position: absolute; top: 0; right: 0; width: 300px; height: auto; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px; padding-top: 20px; padding-right: 20px; padding-bottom: 20px; padding-left: 20px; bottom: 0; background-color: rgba(0, 0, 0, 0.42); display: none;" />
+</ui:UXML>

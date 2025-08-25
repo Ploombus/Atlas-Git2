@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0212ab4ef694b7b43b2196621a33e038
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - unitPrefabGameObject: {fileID: 2945860430356742780, guid: 1471c0b4f6285f24e9c5f21057199b26, type: 3}
+  - dotPrefabGameObject: {fileID: 3506256889846336987, guid: b388daf7aa51fef40a69f8b742f0bd2f, type: 3}
+  - formationArrowPrefabGameObject: {fileID: 657034154890589947, guid: 7d552317b1093b249b4a8ca0ee081b8c, type: 3}
+  - targetArrowPrefabGameObject: {fileID: 657034154890589947, guid: 335cb33407f4a3c4890be517dabba042, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

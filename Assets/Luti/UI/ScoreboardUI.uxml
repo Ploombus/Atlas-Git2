@@ -1,0 +1,10 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Luti/UI/ScoreboardStyles.uss?fileID=7433441132597879392&amp;guid=eaec9c6ac2253fb429acc1d22f517dcb&amp;type=3#ScoreboardStyles" />
+    <ui:VisualElement name="scoreboard-container" class="scoreboard-panel" style="top: 70px;">
+        <ui:VisualElement name="resources-section" class="resources-section">
+            <ui:Label name="resource1-display" text="100" class="resource1-display" />
+            <ui:Label name="resource2-display" text="100" class="resource2-display" />
+        </ui:VisualElement>
+        <ui:VisualElement name="players-container" class="players-container" />
+    </ui:VisualElement>
+</ui:UXML>
