@@ -39,7 +39,6 @@ public static class BuildingUIEvents
     }
 }
 
-// Data structures for events
 public struct BuildingSelectedEventData
 {
     public Entity BuildingEntity;
