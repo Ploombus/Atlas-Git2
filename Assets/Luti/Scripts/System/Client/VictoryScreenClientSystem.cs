@@ -2,10 +2,6 @@ using Unity.Entities;
 using Unity.NetCode;
 using Unity.Collections;
 
-/// <summary>
-/// Client system that handles victory screen display
-/// Processes ShowVictoryScreenRpc RPCs from server
-/// </summary>
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial struct VictoryScreenClientSystem : ISystem
@@ -47,9 +43,6 @@ public partial struct VictoryScreenClientSystem : ISystem
     }
 }
 
-/// <summary>
-/// RPC command for sending victory screen events to clients
-/// </summary>
 public struct ShowVictoryScreenRpc : IRpcCommand
 {
     public int winnerPlayerId;

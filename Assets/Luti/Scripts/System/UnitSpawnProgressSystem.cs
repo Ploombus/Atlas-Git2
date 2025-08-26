@@ -2,9 +2,6 @@ using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 
-/// <summary>
-/// BULLETPROOF simple system - tracks spawn requests directly
-/// </summary>
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial struct UnitSpawnProgressSystem : ISystem
 {

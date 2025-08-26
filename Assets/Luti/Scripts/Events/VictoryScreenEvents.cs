@@ -1,9 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// Static events class for victory screen communication
-/// </summary>
 public static class VictoryScreenEvents
 {
     public static event Action<VictoryScreenData> OnShowVictoryScreen;
@@ -20,9 +17,6 @@ public static class VictoryScreenEvents
     }
 }
 
-/// <summary>
-/// Data structure containing all information needed for victory screen display
-/// </summary>
 public struct VictoryScreenData
 {
     public int winnerPlayerId;
@@ -33,7 +27,7 @@ public struct VictoryScreenData
     {
         if (winnerPlayerId == -1)
         {
-            // Single player lost
+            // Single player elimination - simple message
             return "GAME OVER";
         }
 
@@ -43,8 +37,15 @@ public struct VictoryScreenData
     public string GetWinnerText()
     {
         if (winnerPlayerId == -1)
-            return "No units remaining and insufficient resources";
+        {
+            return "Eliminated: No units remaining and Resource1 ≤ 10";
+        }
 
         return $"Player {winnerPlayerId} Wins!";
+    }
+
+    public string GetEliminationReason()
+    {
+        return "A player was eliminated when they had no alive units and Resource1 dropped to 10 or below";
     }
 }

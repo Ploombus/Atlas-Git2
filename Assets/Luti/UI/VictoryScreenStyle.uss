@@ -1,5 +1,13 @@
 :root {
-
+    /* Color Variables */
+    --victory-color: rgb(50, 200, 50);
+    --defeat-color: rgb(200, 50, 50);
+    --elimination-color: rgb(200, 150, 50);
+    --neutral-color: rgb(220, 220, 220);
+    --background-dark: rgb(40, 40, 40);
+    --background-darker: rgb(60, 60, 60);
+    --border-color: rgb(200, 200, 200);
+    --border-subtle: rgb(120, 120, 120);
 }
 
 /* Victory Screen Container - Full screen overlay */
@@ -9,119 +17,257 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.85);
     justify-content: center;
     align-items: center;
     display: none;
+    padding: 20px;
 }
 
 /* Main Victory Panel */
 .victory-panel {
-    background-color: rgb(40, 40, 40);
+    background-color: var(--background-dark);
     border-left-width: 3px;
     border-right-width: 3px;
     border-top-width: 3px;
     border-bottom-width: 3px;
-    border-left-color: rgb(200, 200, 200);
-    border-right-color: rgb(200, 200, 200);
-    border-top-color: rgb(200, 200, 200);
-    border-bottom-color: rgb(200, 200, 200);
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
+    border-left-color: var(--border-color);
+    border-right-color: var(--border-color);
+    border-top-color: var(--border-color);
+    border-bottom-color: var(--border-color);
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
     padding-left: 30px;
     padding-right: 30px;
     padding-top: 30px;
     padding-bottom: 30px;
     min-width: 600px;
-    max-width: 800px;
+    max-width: 900px;
+    max-height: 80%;
     align-items: center;
+    flex-shrink: 0;
 }
 
-/* Victory/Defeat Message */
-#victory-message {
+/* Victory/Defeat/Elimination Message */
+.victory-message {
     font-size: 48px;
     -unity-font-style: bold;
     margin-bottom: 20px;
     -unity-text-align: middle-center;
-    color: rgb(220, 220, 220);
+    color: var(--neutral-color);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Winner Text */
-#winner-text {
+/* Victory state styling */
+.victory-message.victory {
+    color: var(--victory-color);
+}
+
+/* Defeat state styling */
+.victory-message.defeat {
+    color: var(--defeat-color);
+}
+
+/* Elimination state styling */
+.victory-message.elimination {
+    color: var(--elimination-color);
+}
+
+/* Winner/Elimination Text */
+.winner-text {
     font-size: 24px;
     -unity-font-style: bold;
-    color: rgb(220, 220, 220);
+    color: var(--neutral-color);
     margin-bottom: 30px;
     -unity-text-align: middle-center;
+    white-space: normal;
 }
 
-/* Scores Header */
-.scores-header {
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(220, 220, 220);
-    margin-bottom: 10px;
-    -unity-text-align: middle-center;
-}
-
-/* Scores Container */
+/* Scrollable Scores Container */
 .scores-container {
-    background-color: rgb(60, 60, 60);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgb(120, 120, 120);
-    border-right-color: rgb(120, 120, 120);
-    border-top-color: rgb(120, 120, 120);
-    border-bottom-color: rgb(120, 120, 120);
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    border-bottom-left-radius: 5px;
-    border-bottom-right-radius: 5px;
+    background-color: var(--background-darker);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: var(--border-subtle);
+    border-right-color: var(--border-subtle);
+    border-top-color: var(--border-subtle);
+    border-bottom-color: var(--border-subtle);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
     padding-left: 20px;
     padding-right: 20px;
     padding-top: 20px;
     padding-bottom: 20px;
     margin-bottom: 20px;
-    max-height: 300px;
-    flex-direction: column;
+    max-height: 400px;
+    min-height: 150px;
 }
 
-/* Close Button */
-#close-button {
-    background-color: rgb(80, 80, 80);
-    border-left-width: 2px;
-    border-right-width: 2px;
-    border-top-width: 2px;
-    border-bottom-width: 2px;
-    border-left-color: rgb(120, 120, 120);
-    border-right-color: rgb(120, 120, 120);
-    border-top-color: rgb(120, 120, 120);
-    border-bottom-color: rgb(120, 120, 120);
+/* Scores Content */
+.scores-content {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Scores Title */
+.scores-title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--neutral-color);
+    margin-bottom: 15px;
+    -unity-text-align: middle-center;
+}
+
+/* Individual Score Entry */
+.score-entry {
+    background-color: rgba(80, 80, 80, 0.7);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-subtle);
+    border-right-color: var(--border-subtle);
+    border-top-color: var(--border-subtle);
+    border-bottom-color: var(--border-subtle);
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
-    color: rgb(220, 220, 220);
-    font-size: 16px;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 15px;
+    padding-right: 15px;
     padding-top: 10px;
     padding-bottom: 10px;
+    margin-bottom: 10px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Winner Entry Highlight */
+.score-entry.winner-entry {
+    background-color: rgba(50, 200, 50, 0.2);
+    border-left-color: var(--victory-color);
+    border-right-color: var(--victory-color);
+    border-top-color: var(--victory-color);
+    border-bottom-color: var(--victory-color);
+}
+
+/* Rank Label */
+.rank-label {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--neutral-color);
+    min-width: 30px;
+    margin-right: 10px;
+}
+
+/* Player Label */
+.player-label {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: var(--neutral-color);
+    flex-grow: 1;
+}
+
+/* Local Player Highlight */
+.player-label.local-player {
+    color: rgb(100, 150, 255);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Scores Section */
+.scores-section {
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 200px;
+}
+
+/* Total Score */
+.total-score {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--victory-color);
+    margin-bottom: 5px;
+}
+
+/* Resource Scores */
+.resource-scores {
+    font-size: 14px;
+    color: var(--neutral-color);
+    margin-bottom: 3px;
+}
+
+/* Final Resources */
+.final-resources {
+    font-size: 12px;
+    color: rgba(220, 220, 220, 0.7);
+}
+
+/* Elimination Reason */
+.elimination-reason {
+    font-size: 16px;
+    -unity-font-style: italic;
+    color: var(--elimination-color);
+    margin-top: 15px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+/* No Scores Message */
+.no-scores-message {
+    font-size: 16px;
+    -unity-font-style: italic;
+    color: rgba(220, 220, 220, 0.7);
+    -unity-text-align: middle-center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Button Container */
+.button-container {
+    flex-direction: row;
+    justify-content: center;
     margin-top: 20px;
 }
 
-#close-button:hover {
-    background-color: rgb(100, 100, 100);
-    border-left-color: rgb(140, 140, 140);
-    border-right-color: rgb(140, 140, 140);
-    border-top-color: rgb(140, 140, 140);
-    border-bottom-color: rgb(140, 140, 140);
+/* Primary Button */
+.primary-button {
+    background-color: rgb(70, 70, 70);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: var(--border-color);
+    border-right-color: var(--border-color);
+    border-top-color: var(--border-color);
+    border-bottom-color: var(--border-color);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    color: var(--neutral-color);
+    font-size: 18px;
+    -unity-font-style: bold;
+    padding-left: 25px;
+    padding-right: 25px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    min-width: 150px;
+    transition-duration: 0.2s;
 }
 
-#close-button:active {
-    background-color: rgb(60, 60, 60);
+.primary-button:hover {
+    background-color: rgb(90, 90, 90);
+    scale: 1.05 1.05;
+}
+
+.primary-button:active {
+    background-color: rgb(50, 50, 50);
+    scale: 0.95 0.95;
 }

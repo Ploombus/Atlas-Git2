@@ -245,6 +245,7 @@ GameObject:
   - component: {fileID: 1728502719}
   - component: {fileID: 1728502720}
   - component: {fileID: 1728502721}
+  - component: {fileID: 1728502722}
   m_Layer: 0
   m_Name: VictoryScreenUI
   m_TagString: Untagged
@@ -305,6 +306,19 @@ MonoBehaviour:
   victoryScreenDocument: {fileID: 1728502720}
   autoHideAfterSeconds: 0
   autoHideDelay: 10
+--- !u!114 &1728502722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728502718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7deedbb2111016146be6d538592ef4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeaveGameButton
+  leaveButton: {fileID: 0}
 --- !u!1 &1934803230
 GameObject:
   m_ObjectHideFlags: 0
@@ -374,37 +388,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingUI
   _BuildingUI: {fileID: 1934803231}
---- !u!1 &2076613926
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2076613927}
-  m_Layer: 0
-  m_Name: MinimumUnitCostAuthoring
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2076613927
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2076613926}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.5335, y: -0.1, z: 6.29031}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -413,4 +396,3 @@ SceneRoots:
   - {fileID: 1472135024}
   - {fileID: 1934803233}
   - {fileID: 1728502719}
-  - {fileID: 2076613927}

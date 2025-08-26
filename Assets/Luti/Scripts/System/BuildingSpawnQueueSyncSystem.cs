@@ -2,7 +2,6 @@ using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;
 
-// Server-side system to sync BuildingSpawnQueue to BuildingSpawnQueueClient
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public partial struct BuildingSpawnQueueSyncSystem : ISystem
 {
@@ -14,7 +13,6 @@ public partial struct BuildingSpawnQueueSyncSystem : ISystem
         int addedCount = 0;
         int updatedCount = 0;
 
-        // Sync server BuildingSpawnQueue to client BuildingSpawnQueueClient
         foreach (var (spawnQueue, entity) in
                  SystemAPI.Query<RefRO<BuildingSpawnQueue>>().WithEntityAccess())
         {

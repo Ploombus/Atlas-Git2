@@ -4,10 +4,7 @@ using Unity.Mathematics;
 using Unity.Collections;
 using UnityEngine;
 
-/// <summary>
-/// FIXED: Server system that creates proper ghosted player entities
-/// IMPORTANT: Process PlayerStats BEFORE SpawnServerSystem removes PendingPlayerSpawn
-/// </summary>
+
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SpawnServerSystem))] // CRITICAL: Run before SpawnServerSystem
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -51,17 +48,12 @@ public partial struct ServerPlayerStatsSystem : ISystem
 
     private void ProcessPlayerSpawning(ref SystemState state, EntityCommandBuffer ecb)
     {
-        // Option A: Use prefab if available
         if (SystemAPI.TryGetSingleton<EntitiesReferencesLuti>(out var references) &&
             references.playerStatsPrefabEntity != Entity.Null)
         {
             ProcessPlayerSpawningWithPrefab(ref state, ecb, references);
         }
-        else
-        {
-            // Option B: Fallback to manual entity creation
-            ProcessPlayerSpawningManual(ref state, ecb);
-        }
+
     }
 
     private void ProcessPlayerSpawningWithPrefab(ref SystemState state, EntityCommandBuffer ecb, EntitiesReferencesLuti references)
@@ -72,10 +64,8 @@ public partial struct ServerPlayerStatsSystem : ISystem
             .WithNone<PlayerStatsEntity>()
             .WithEntityAccess())
         {
-            // FIXED: Instantiate from prefab for proper replication
             var playerStatsEntity = ecb.Instantiate(references.playerStatsPrefabEntity);
 
-            // Set player-specific data
             ecb.SetComponent(playerStatsEntity, new PlayerStats
             {
                 resource1 = STARTING_RESOURCE1,
@@ -92,37 +82,9 @@ public partial struct ServerPlayerStatsSystem : ISystem
             // Link connection to stats entity
             ecb.AddComponent(connectionEntity, new PlayerStatsEntity { Value = playerStatsEntity });
 
-            // DON'T remove PendingPlayerSpawn here - let SpawnServerSystem handle it
         }
     }
 
-    private void ProcessPlayerSpawningManual(ref SystemState state, EntityCommandBuffer ecb)
-    {
-        foreach (var (netId, connectionEntity) in
-            SystemAPI.Query<RefRO<NetworkId>>()
-            .WithAll<PendingPlayerSpawn>()
-            .WithNone<PlayerStatsEntity>()
-            .WithEntityAccess())
-        {
-            // Fallback: Create entity manually (won't replicate properly)
-            var playerStatsEntity = ecb.CreateEntity();
-
-            ecb.AddComponent(playerStatsEntity, new PlayerStats
-            {
-                resource1 = STARTING_RESOURCE1,
-                resource2 = STARTING_RESOURCE2,
-                totalScore = 0,
-                resource1Score = 0,
-                resource2Score = 0,
-                playerId = netId.ValueRO.Value
-            });
-
-            ecb.AddComponent(playerStatsEntity, new GhostOwner { NetworkId = netId.ValueRO.Value });
-            ecb.AddComponent(connectionEntity, new PlayerStatsEntity { Value = playerStatsEntity });
-
-            // DON'T remove PendingPlayerSpawn here - let SpawnServerSystem handle it
-        }
-    }
 
     private void ProcessStatsChangeEvents(ref SystemState state, EntityCommandBuffer ecb, StatsConfig config)
     {

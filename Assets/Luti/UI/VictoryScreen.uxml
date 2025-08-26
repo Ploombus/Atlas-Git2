@@ -2,20 +2,23 @@
     <Style src="project://database/Assets/Luti/UI/VictoryScreenStyle.uss?fileID=7433441132597879392&amp;guid=4c0db576dacba9b47b380150ffb10f88&amp;type=3#VictoryScreenStyle" />
 <ui:VisualElement name="victory-container" picking-mode="Ignore">
         <ui:VisualElement class="victory-panel">
-            <!-- Victory/Defeat Message -->
-            <ui:Label name="victory-message" text="VICTORY!" />
             
-            <!-- Winner Information -->
-            <ui:Label name="winner-text" text="Player 1 Wins!" />
+            <!-- Victory/Defeat/Elimination Message -->
+            <ui:Label name="victory-message" text="GAME OVER" class="victory-message" />
             
-            <!-- Scores Header -->
-            <ui:Label text="Final Scores" class="scores-header" />
+            <!-- Winner/Elimination Information -->
+            <ui:Label name="winner-text" text="No units remaining" class="winner-text" />
             
-            <!-- Scores Content (populated dynamically) -->
-            <ui:VisualElement name="scores-content" class="scores-container" />
+            <!-- Scrollable Content Area -->
+            <ui:ScrollView name="scores-container" class="scores-container">
+                <ui:VisualElement name="scores-content" class="scores-content" />
+            </ui:ScrollView>
             
-            <!-- Leave to Menu Button -->
-            <ui:Button name="close-button" text="Leave to Menu" />
+            <!-- Action Buttons -->
+            <ui:VisualElement class="button-container">
+                <ui:Button name="close-button" text="Return to Menu" class="primary-button" />
+            </ui:VisualElement>
+            
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

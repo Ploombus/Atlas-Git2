@@ -19,7 +19,6 @@ public partial struct BuildingUISystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
-        // MIGRATED: Get resources directly from PlayerStats instead of ResourceManager
         if (!PlayerStatsUtils.TryGetLocalResources(out int currentResource1, out int currentResource2))
         {
             return; // No local player stats available yet
@@ -38,14 +37,12 @@ public partial struct BuildingUISystem : ISystem
             }
         }
 
-        // FIXED: Monitor for buildings with ENABLED Selected component
         Entity currentlySelectedBuilding = Entity.Null;
         foreach (var (building, entity) in
             SystemAPI.Query<RefRO<Building>>()
             .WithAll<Selected>()  // Only buildings that have Selected component
             .WithEntityAccess())
         {
-            // CRITICAL: Check if the Selected component is actually ENABLED
             if (state.EntityManager.IsComponentEnabled<Selected>(entity))
             {
                 currentlySelectedBuilding = entity;
@@ -75,7 +72,6 @@ public partial struct BuildingUISystem : ISystem
     private void HandleBuildingSelection(ref SystemState state, Entity buildingEntity,
         int currentResource1, int currentResource2)
     {
-        // FIXED: Check ownership using the same method as PlayerStatsUtils
         bool isOwned = false;
         int ownerNetworkId = -999;
         int localPlayerNetworkId = -999;
@@ -93,7 +89,6 @@ public partial struct BuildingUISystem : ISystem
             }
         }
 
-        // UPDATED: Create event data with all required fields
         var eventData = new BuildingSelectedEventData
         {
             BuildingEntity = buildingEntity,
