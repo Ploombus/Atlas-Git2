@@ -1,14 +1,14 @@
+
+using UnityEngine;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Physics;
-using UnityEngine;
-using Unity.Collections;
 using Managers;
 
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
+[WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 partial struct MovementSystem : ISystem
 {
     // ========================= KNOBS =========================
@@ -57,7 +57,7 @@ partial struct MovementSystem : ISystem
 
     // --- Rotation (visual yaw) ---
     const bool  AUTO_FACE_WHEN_IDLE     = true;  // when not moving, face nearest enemy in attack range
-    const float MOVE_FACING_THRESHOLD   = 0.06f; // [m/s] prefer facing movement direction above this speed
+    const float MOVE_FACING_THRESHOLD   = 0.02f; // [m/s] prefer facing movement direction above this speed
     const float MAX_YAW_DEG_PER_SEC     = 180f;  // visual yaw cap
     const float ROT_YAW_WEIGHT_INFLUENCE = 1.20f; // ≥0
     const float ROT_YAW_SPEED_INFLUENCE  = 0.70f; // ≥0
@@ -68,12 +68,18 @@ partial struct MovementSystem : ISystem
     const float ROT_STEER_WEIGHT_INFLUENCE = 1.00f; // ≥0
     const float ROT_STEER_TURN_RATE_MULT   = 3.0f;
 
+    // --- Running in place geez ---
+    const float WRITE_ZERO_SPEED_EPS = 0.1f; 
+
+    // --- Attack range ---
+    const float REDUCE_ATTACKRANGE_BY = 0.1f; //reduction of AR for better targeting
+
     // ===================== HELPERS =====================
 
     static float ComputeTurnRateRadPerSec(float currentSpeed, float topSpeed, float massKg)
     {
         const float turnRateAtZero = 7f;   // rad/s
-        const float turnRateAtRun  = 4f;   // rad/s
+        const float turnRateAtRun = 4f;   // rad/s
 
         float speedFrac = math.saturate(currentSpeed / math.max(0.1f, topSpeed));
         float t = math.lerp(0f, speedFrac, math.max(0f, ROT_STEER_SPEED_INFLUENCE));
@@ -175,7 +181,7 @@ partial struct MovementSystem : ISystem
             if (SystemAPI.HasComponent<CombatStats>(unitEntity) && haveFacingFromTarget)
             {
                 var combatStats = SystemAPI.GetComponentRO<CombatStats>(unitEntity);
-                float effectiveAttackRange = combatStats.ValueRO.attackRange - 0.2f;
+                float effectiveAttackRange = combatStats.ValueRO.attackRange - REDUCE_ATTACKRANGE_BY;
                 effectiveAttackRange = math.max(0f, effectiveAttackRange);
                 float effectiveAttackRangeSq = effectiveAttackRange * effectiveAttackRange;
 
@@ -208,8 +214,6 @@ partial struct MovementSystem : ISystem
                     !unitTargets.ValueRO.activeTargetSet &&
                     !chasing)
                 {
-                    if (math.length(physicsVelocity.ValueRO.Linear) <= MOVE_FACING_THRESHOLD)
-                        physicsVelocity.ValueRW.Linear = float3.zero;
                     physicsVelocity.ValueRW.Angular = float3.zero;
 
                     // rotation while sticking
@@ -316,7 +320,7 @@ partial struct MovementSystem : ISystem
                         }
                     }
 
-                    physicsVelocity.ValueRW.Linear  = float3.zero;
+                    physicsVelocity.ValueRW.Linear = float3.zero;
                     physicsVelocity.ValueRW.Angular = float3.zero;
 
                     // arrival facing
@@ -530,7 +534,7 @@ partial struct MovementSystem : ISystem
                         // Keep a floor ONLY when explicitly charging through an enemy unit.
                         // Otherwise (trees/buildings/friendlies, or enemy units when not charging) allow full stop.
                         bool chargeThrough = (steeringToFocus && steeringToEnemyUnit && isCharging);
-                        float speedFloor   = chargeThrough ? ARRIVE_SPEED_FLOOR_MPS : 0f;
+                        float speedFloor = chargeThrough ? ARRIVE_SPEED_FLOOR_MPS : 0f;
 
                         vCap = math.max(vCap, speedFloor);
                         targetSpeed = math.min(targetSpeed, vCap);
@@ -604,6 +608,7 @@ partial struct MovementSystem : ISystem
 
             float3 vNew = vNow + deltaVForward + deltaVLateral;
 
+            
             // === Snap / stop — gated like the arrival cap ===
             {
                 float snapDistSq = steeringToFocus ? steerDistSq : distSq;
@@ -623,7 +628,7 @@ partial struct MovementSystem : ISystem
                     }
                 }
             }
-
+            
             // ================= ROTATION (VISUAL YAW) =================
             {
                 float speedNow = math.length(vNew);
@@ -674,6 +679,9 @@ partial struct MovementSystem : ISystem
 
                 RotateYawToward(ref localTransform.ValueRW, targetYaw, maxDeltaYaw);
             }
+
+            if (math.lengthsq(vNew) < WRITE_ZERO_SPEED_EPS * WRITE_ZERO_SPEED_EPS)
+            vNew = float3.zero;
 
             physicsVelocity.ValueRW.Linear = vNew;
             physicsVelocity.ValueRW.Angular = float3.zero;

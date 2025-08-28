@@ -3,9 +3,7 @@ using Unity.NetCode;
 using Unity.Collections;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-//[UpdateAfter(typeof(FollowTargetServerSystem))]
-[UpdateBefore(typeof(GatheringServerSystem))] // if you named it differently, update this
+[UpdateBefore(typeof(GatheringServerSystem))]
 public partial struct ChopOrderServerSystem : ISystem
 {
     const float DEFAULT_HIT_RANGE    = 2.2f;

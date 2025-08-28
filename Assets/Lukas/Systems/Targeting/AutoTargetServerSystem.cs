@@ -5,9 +5,8 @@ using Unity.NetCode;
 using Unity.Transforms;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(ApplyMoveRequestsServerSystem))]
-[UpdateBefore(typeof(FollowEntityServerSystem))]
+[UpdateBefore(typeof(MovementToEntityServerSystem))]
 public partial struct AutoTargetServerSystem : ISystem
 {
     public void OnCreate(ref SystemState state)
@@ -70,9 +69,24 @@ public partial struct AutoTargetServerSystem : ISystem
             }
 
             // Decide if auto-focus is allowed this tick
-            bool allowAutoFocus = attacker.attackMove || (!targets.activeTargetSet && attacker.autoTarget);
+
+            bool isAMove = attacker.attackMove && targets.activeTargetSet;
+            bool isAutoFocus = !targets.activeTargetSet && attacker.autoTarget;
+            bool allowAutoFocus = isAMove || isAutoFocus;
 
             if (!allowAutoFocus)
+            {
+                targetsRW.ValueRW.targetRotation = float.NaN;
+                targetsRW.ValueRW.targetEntity   = Entity.Null;
+                continue;
+            }
+
+            // === NEW: leash gate for auto-focus (not for A-move) ===
+            float leashMeters = attacker.maxChaseMeters;
+            bool useLeash = isAutoFocus && leashMeters >= 0f; // negative = unlimited, match movement behavior
+
+            // If leash == 0 → never acquire a target
+            if (useLeash && leashMeters == 0f)
             {
                 targetsRW.ValueRW.targetRotation = float.NaN;
                 targetsRW.ValueRW.targetEntity   = Entity.Null;
@@ -85,6 +99,15 @@ public partial struct AutoTargetServerSystem : ISystem
             float  r2  = r * r;
 
             byte myFaction = FactionUtility.EffectiveFaction(e, em);
+
+            float effectiveAttackRange = 0f;
+            if (em.HasComponent<CombatStats>(e))
+            {
+                var cs = em.GetComponentData<CombatStats>(e);
+                const float tol = 1f; // keep consistent with MovementToEntity’s tolerance
+                effectiveAttackRange = math.max(0f, cs.attackRange - tol);
+            }
+
 
             int   bestIdx = -1;
             float bestD2  = float.MaxValue;
@@ -101,14 +124,28 @@ public partial struct AutoTargetServerSystem : ISystem
                     if (hs.currentStage == HealthStage.Dead) continue;
                 }
 
-                // Mask check (no owner fallback)
+                // Hostility
                 byte otherFaction = candFactions[i];
                 if (!FactionUtility.AreHostile(myFaction, otherFaction, rel, factionCount))
                     continue;
 
+                // Detection radius
                 float3 d  = candTransforms[i].Position - myP; d.y = 0f;
                 float  d2 = math.lengthsq(d);
                 if (d2 > r2) continue;
+
+                // === NEW: leash filter (auto-focus only) ===
+                if (useLeash && leashMeters > 0f)
+                {
+                    // Where would we stop if we chased this unit? (enemy: stop at attack range from target)
+                    float3 dir = math.normalizesafe(d, new float3(0,0,1));
+                    float3 desiredStopPos = candTransforms[i].Position - dir * effectiveAttackRange;
+
+                    float3 center = targets.destinationPosition; // same “center” you clamp to in Movement systems
+                    float3 off = desiredStopPos - center; off.y = 0f;
+                    float  distFromCenter = math.length(off);
+                    if (distFromCenter > leashMeters) continue; // out of leash → ignore this candidate
+                }
 
                 if (d2 < bestD2)
                 {
@@ -119,25 +156,27 @@ public partial struct AutoTargetServerSystem : ISystem
 
             if (bestIdx >= 0)
             {
-                var    best = candEntities[bestIdx];
+                var best = candEntities[bestIdx];
                 float3 tPos = candTransforms[bestIdx].Position;
-                float3 to   = tPos - myP; to.y = 0f;
+                float3 to = tPos - myP; to.y = 0f;
 
-                targetsRW.ValueRW.targetEntity   = best;
+                targetsRW.ValueRW.targetEntity = best;
                 targetsRW.ValueRW.targetRotation = math.atan2(to.x, to.z);
-
+                
+                /*
                 // Optional: mirror on Attacker for later combat logic
                 if (em.HasComponent<Attacker>(e))
                 {
                     var att = em.GetComponentData<Attacker>(e);
-                    att.attackTargetEntity = best;
+                    att.attackAimEntity = best;
                     em.SetComponentData(e, att);
                 }
+                */
             }
             else
             {
                 targetsRW.ValueRW.targetRotation = float.NaN;
-                targetsRW.ValueRW.targetEntity   = Entity.Null;
+                targetsRW.ValueRW.targetEntity = Entity.Null;
             }
         }
 

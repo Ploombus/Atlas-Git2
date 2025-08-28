@@ -2,7 +2,6 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 
-// Server-side component (existing)
 public struct BuildingSpawnQueue : IComponentData
 {
     public int unitsInQueue;
@@ -24,6 +23,9 @@ public struct PendingUnitSpawn : IComponentData
     public float3 spawnPosition;
     public float remainingTime;
     public float totalSpawnTime;
+    // Track reserved resources for this spawn
+    public int reservedResource1;
+    public int reservedResource2;
 }
 
 public struct QueuedUnitSpawn : IComponentData
@@ -31,6 +33,9 @@ public struct QueuedUnitSpawn : IComponentData
     public Entity buildingEntity;
     public int ownerNetworkId;
     public float3 spawnPosition;
+    // Track reserved resources for this queued spawn
+    public int reservedResource1;
+    public int reservedResource2;
 }
 
 public struct UnitSpawnTimer : IComponentData

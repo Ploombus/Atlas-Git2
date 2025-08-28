@@ -20,11 +20,12 @@ public class UnitAuthoring : MonoBehaviour
             AddComponent(e, new UnitTargets
             {
                 destinationPosition = float3.zero,
-                destinationRotation = float.NaN,
+                destinationRotation = 0,
                 targetPosition      = float3.zero,
                 targetRotation      = float.NaN,
                 lastAppliedSequence = 0,
                 activeTargetSet     = false,
+                destinationEntity   = Entity.Null,
                 targetEntity        = Entity.Null,
                 hasArrived          = true
             });
@@ -71,8 +72,9 @@ public struct UnitTargets : IComponentData
     [GhostField] public float targetRotation;
     [GhostField] public int lastAppliedSequence;
     [GhostField] public bool activeTargetSet;
-    public Entity targetEntity;
-    public bool hasArrived;
+    [GhostField] public Entity destinationEntity;
+    [GhostField] public Entity targetEntity;
+    [GhostField] public bool hasArrived;
 
     //[GhostField] public bool isRunning;
 }
@@ -82,6 +84,7 @@ public struct UnitTargetsNetcode : IInputComponentData
     public float requestDestinationRotation;
     public int requestLastAppliedSequence;
     public bool requestActiveTargetSet;
+    public Entity requestDestinationEntity;
     public Entity requestTargetEntity;
     public bool requestAttackMove;
     public Stance requestStance;

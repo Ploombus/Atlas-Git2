@@ -8,6 +8,7 @@ public class EntitiesReferencesAuthoringLukas : MonoBehaviour
     public GameObject dotPrefabGameObject;
     public GameObject formationArrowPrefabGameObject;
     public GameObject targetArrowPrefabGameObject;
+    public GameObject aimIndicatorPrefabGameObject;
     public GameObject treePrefabGameObject;
    
     public class Baker : Baker<EntitiesReferencesAuthoringLukas>
@@ -21,6 +22,7 @@ public class EntitiesReferencesAuthoringLukas : MonoBehaviour
                 dotPrefabEntity = GetEntity(authoring.dotPrefabGameObject, TransformUsageFlags.Renderable),
                 formationArrowPrefabEntity = GetEntity(authoring.formationArrowPrefabGameObject, TransformUsageFlags.Renderable),
                 targetArrowPrefabEntity = GetEntity(authoring.targetArrowPrefabGameObject, TransformUsageFlags.Renderable),
+                aimIndicatorPrefabEntity = GetEntity(authoring.aimIndicatorPrefabGameObject, TransformUsageFlags.Renderable),
                 treePrefabEntity = GetEntity(authoring.treePrefabGameObject, TransformUsageFlags.Renderable),
             });
         }
@@ -33,5 +35,6 @@ public struct EntitiesReferencesLukas : IComponentData
     public Entity dotPrefabEntity;
     public Entity formationArrowPrefabEntity;
     public Entity targetArrowPrefabEntity;
+    public Entity aimIndicatorPrefabEntity;
     public Entity treePrefabEntity;
 }

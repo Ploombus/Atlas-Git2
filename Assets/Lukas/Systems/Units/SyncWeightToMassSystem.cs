@@ -4,7 +4,6 @@ using Unity.Physics;
 using Unity.Physics.Systems;
 
 [UpdateInGroup(typeof(PhysicsSystemGroup))]
-//[UpdateBefore(typeof(BuildPhysicsWorld))]
 partial struct SyncWeightToMassSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)

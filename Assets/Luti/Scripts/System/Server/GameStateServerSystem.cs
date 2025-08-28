@@ -9,7 +9,7 @@ using UnityEngine;
 [UpdateAfter(typeof(ServerPlayerStatsSystem))]
 public partial struct GameStateServerSystem : ISystem
 {
-    private const int MINIMUM_RESOURCE1_TO_SURVIVE = 20;
+    private const int MINIMUM_RESOURCE1_TO_SURVIVE = 19;
 
     public void OnCreate(ref SystemState state)
     {

@@ -504,7 +504,7 @@ MonoBehaviour:
   zoomSpeed: 10
   zoomMultiplyier: 1
   minY: 10
-  maxY: 300
+  maxY: 150
   planeHeight: 0
   useBounds: 1
   xLimits: {x: -100, y: 100}

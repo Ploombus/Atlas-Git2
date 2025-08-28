@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class CameraRig : MonoBehaviour
 {
@@ -45,35 +46,38 @@ public class CameraRig : MonoBehaviour
         }
 
         // --- Mouse wheel zoom that preserves the ground point under the crosshair ---
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (Mathf.Abs(scroll) > 0.0001f)
+        if (IsMouseInGameView() && !IsOverUI())
         {
-            var cam = Camera.main;
-            if (cam != null)
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (Mathf.Abs(scroll) > 0.0001f)
             {
-                float camHeight = Mathf.Max(0.001f, cam.transform.position.y - planeHeight);
-                float refHeight = Mathf.Max(0.001f, minY - planeHeight); // zoomSpeed applies at minY
-                float zoomHeightScale = Mathf.Pow(camHeight / refHeight, zoomMultiplyier);
-
-                float deltaY = -scroll * zoomSpeed * zoomHeightScale;
-                float targetCamY = Mathf.Clamp(cam.transform.position.y + deltaY, minY, maxY);
-
-                var plane = new Plane(Vector3.up, new Vector3(0f, planeHeight, 0f));
-                Ray centerRay = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-
-                if (plane.Raycast(centerRay, out float enter) && Mathf.Abs(cam.transform.forward.y) > 1e-4f)
+                var cam = Camera.main;
+                if (cam != null)
                 {
-                    Vector3 anchor = centerRay.GetPoint(enter);
+                    float camHeight = Mathf.Max(0.001f, cam.transform.position.y - planeHeight);
+                    float refHeight = Mathf.Max(0.001f, minY - planeHeight); // zoomSpeed applies at minY
+                    float zoomHeightScale = Mathf.Pow(camHeight / refHeight, zoomMultiplyier);
 
-                    float s = (anchor.y - targetCamY) / cam.transform.forward.y;
-                    Vector3 targetCamPos = anchor - cam.transform.forward * s;
+                    float deltaY = -scroll * zoomSpeed * zoomHeightScale;
+                    float targetCamY = Mathf.Clamp(cam.transform.position.y + deltaY, minY, maxY);
 
-                    Vector3 camDelta = targetCamPos - cam.transform.position;
-                    newRigPosition += camDelta; // move rig so camera ends up at targetCamPos
-                }
-                else
-                {
-                    newRigPosition.y = Mathf.Clamp(newRigPosition.y + deltaY, minY, maxY);
+                    var plane = new Plane(Vector3.up, new Vector3(0f, planeHeight, 0f));
+                    Ray centerRay = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+
+                    if (plane.Raycast(centerRay, out float enter) && Mathf.Abs(cam.transform.forward.y) > 1e-4f)
+                    {
+                        Vector3 anchor = centerRay.GetPoint(enter);
+
+                        float s = (anchor.y - targetCamY) / cam.transform.forward.y;
+                        Vector3 targetCamPos = anchor - cam.transform.forward * s;
+
+                        Vector3 camDelta = targetCamPos - cam.transform.position;
+                        newRigPosition += camDelta; // move rig so camera ends up at targetCamPos
+                    }
+                    else
+                    {
+                        newRigPosition.y = Mathf.Clamp(newRigPosition.y + deltaY, minY, maxY);
+                    }
                 }
             }
         }
@@ -118,4 +122,14 @@ public class CameraRig : MonoBehaviour
 
         transform.position = newRigPosition;
     }
+
+    bool IsMouseInGameView()
+    {
+        var mp = Input.mousePosition;
+        return mp.x >= 0f && mp.x <= Screen.width &&
+            mp.y >= 0f && mp.y <= Screen.height;
+    }
+    
+    bool IsOverUI() =>
+    EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }

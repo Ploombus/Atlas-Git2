@@ -35,7 +35,7 @@ partial struct SpawnServerSystem : ISystem
 
             for (int i = 0; i < 5; i++)
             {
-                float3 unitPosition = basePosition + new float3(spacing * i, 0f, 0f);
+                float3 unitPosition = basePosition + new float3(spacing * i - 2f, 0f, -8f);
                 var unitEntity = buffer.Instantiate(unitRef.unitPrefabEntity);
                 buffer.AddComponent(unitEntity, new GhostOwner { NetworkId = netId.ValueRO.Value });
                 buffer.SetComponent(unitEntity, LocalTransform.FromPosition(unitPosition));
@@ -49,10 +49,10 @@ partial struct SpawnServerSystem : ISystem
                 buffer.AppendToBuffer(entity, new LinkedEntityGroup { Value = unitEntity });
             }
             // Spawn Barracks building for the player
-            float3 barracksPosition = basePosition + new float3(0f, 0f, 5f); // Position barracks 5 units behind the units
+            float3 barracksPosition = basePosition + new float3(0f, 0f, 0f); // Position barracks 5 units behind the units
             var barracksEntity = buffer.Instantiate(buildingReferences.buildingPrefabEntity);
 
-            buffer.SetComponent(barracksEntity, LocalTransform.FromPosition(barracksPosition.x, 2.5f, barracksPosition.z));
+            buffer.SetComponent(barracksEntity, LocalTransform.FromPosition(barracksPosition.x, 0f, barracksPosition.z));
             buffer.AddComponent(barracksEntity, new GhostOwner { NetworkId = netId.ValueRO.Value });
 
             // Set player color for the barracks (same as units)
@@ -113,10 +113,10 @@ partial struct SpawnServerSystem : ISystem
             return UnityEngine.Random.Range(posgap, posmax);
     }
 
-    static UnitTargets SpawnTargetsAt(float3 position) => new UnitTargets
+    public static UnitTargets SpawnTargetsAt(float3 position) => new UnitTargets
     {
         destinationPosition = position,
-        destinationRotation = float.NaN,
+        destinationRotation = 3.14f,
         targetPosition      = float3.zero,
         targetRotation      = float.NaN,
         lastAppliedSequence = 0,

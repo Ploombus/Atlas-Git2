@@ -168,11 +168,11 @@ PrefabInstance:
     - target: {fileID: 2300002, guid: ef5cd9cdbb80e6849a5f7dd239d56605, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 720ea100b5a5ea741a0e79cfb3ab65c6, type: 2}
+      objectReference: {fileID: 2100000, guid: b139f6a845731bf42bb9c33f60010c8d, type: 2}
     - target: {fileID: 2300004, guid: ef5cd9cdbb80e6849a5f7dd239d56605, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: ff2f42e1397fe8a479eea2973e848d92, type: 2}
+      objectReference: {fileID: 2100000, guid: 3263d0e7b79353443b6b21421dde1a06, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 100000, guid: ef5cd9cdbb80e6849a5f7dd239d56605, type: 3}
@@ -310,7 +310,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05b2e59c8a5595146905de573a242920, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TreePrefabAuthoring
-  woodLeft: 100
+  woodLeft: 50
 --- !u!114 &-3214267950726584231
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -352,3 +352,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OwnershipAuthoring
   color: {r: 1, g: 1, b: 1, a: 1}
+  FactionId: 0

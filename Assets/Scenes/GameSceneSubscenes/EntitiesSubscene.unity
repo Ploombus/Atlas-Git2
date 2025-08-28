@@ -333,7 +333,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d78d6cd3137a8824699cde034b4270c0, type: 2}
+  - {fileID: 2100000, guid: 2fb781335f19c2942a68dc56cc58febf, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -412,6 +412,7 @@ MonoBehaviour:
   dotPrefabGameObject: {fileID: 3506256889846336987, guid: b388daf7aa51fef40a69f8b742f0bd2f, type: 3}
   formationArrowPrefabGameObject: {fileID: 657034154890589947, guid: 7d552317b1093b249b4a8ca0ee081b8c, type: 3}
   targetArrowPrefabGameObject: {fileID: 657034154890589947, guid: 335cb33407f4a3c4890be517dabba042, type: 3}
+  aimIndicatorPrefabGameObject: {fileID: 657034154890589947, guid: a82f0d8d5063b6b4bba7db9f4c974103, type: 3}
   treePrefabGameObject: {fileID: 5486846953588238859, guid: 0716c65eb86131945b9e47e63c09eb0c, type: 3}
 --- !u!4 &1602697778
 Transform:

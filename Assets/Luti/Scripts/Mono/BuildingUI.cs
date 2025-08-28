@@ -9,7 +9,6 @@ public class BuildingUI : MonoBehaviour
     public static BuildingUI Instance { get; private set; }
 
     [SerializeField] private UIDocument _BuildingUI;
-    // REMOVED: public ResourceManager resourceManager; // DELETE THIS LINE FROM SCENE AND COMPONENT
 
     // UI Elements
     private Button spawnerButton;
@@ -80,6 +79,11 @@ public class BuildingUI : MonoBehaviour
         if (buildingUI != null)
         {
             buildingUI.style.display = DisplayStyle.None;
+            Debug.Log("[BuildingUI] UI initialized and hidden");
+        }
+        else
+        {
+            Debug.LogError("[BuildingUI] buildingUI panel not found!");
         }
 
         // Setup input field callbacks
@@ -91,7 +95,7 @@ public class BuildingUI : MonoBehaviour
 
     private void SubscribeToEvents()
     {
-        // Subscribe to your actual BuildingUIEvents
+        // Subscribe to BuildingUIEvents
         BuildingUIEvents.OnBuildingSelected += HandleBuildingSelected;
         BuildingUIEvents.OnBuildingDeselected += HandleBuildingDeselected;
         BuildingUIEvents.OnSpawnCostUpdated += HandleSpawnCostUpdated;
@@ -101,7 +105,7 @@ public class BuildingUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Unsubscribe from your actual BuildingUIEvents
+        // Unsubscribe from BuildingUIEvents
         BuildingUIEvents.OnBuildingSelected -= HandleBuildingSelected;
         BuildingUIEvents.OnBuildingDeselected -= HandleBuildingDeselected;
         BuildingUIEvents.OnSpawnCostUpdated -= HandleSpawnCostUpdated;
@@ -114,9 +118,10 @@ public class BuildingUI : MonoBehaviour
         }
     }
 
-    // CORRECTED: Event Handlers that properly check ownership
+    // Event Handlers
     private void HandleBuildingSelected(BuildingSelectedEventData data)
     {
+
         selectedBuilding = data.BuildingEntity;
 
         // Determine ownership by comparing NetworkIds
@@ -126,16 +131,27 @@ public class BuildingUI : MonoBehaviour
         cachedResource1Cost = data.Resource1Cost;
         cachedResource2Cost = data.Resource2Cost;
 
+
         // Only show building UI if player owns the building AND it has spawn capability
         if (isOwnerOfSelectedBuilding && data.HasSpawnCapability)
         {
-            buildingUI.style.display = DisplayStyle.Flex;
+            if (buildingUI != null)
+            {
+                buildingUI.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                Debug.LogError("[BuildingUI] buildingUI element is null!");
+            }
             UpdateUnitButtonDisplay();
             UpdateAffordabilityUI();
         }
         else
         {
-            buildingUI.style.display = DisplayStyle.None;
+            if (buildingUI != null)
+            {
+                buildingUI.style.display = DisplayStyle.None;
+            }
         }
     }
 
@@ -143,7 +159,10 @@ public class BuildingUI : MonoBehaviour
     {
         selectedBuilding = Entity.Null;
         isOwnerOfSelectedBuilding = false;
-        buildingUI.style.display = DisplayStyle.None;
+        if (buildingUI != null)
+        {
+            buildingUI.style.display = DisplayStyle.None;
+        }
         cachedResource1Cost = 0;
         cachedResource2Cost = 0;
     }
@@ -207,14 +226,15 @@ public class BuildingUI : MonoBehaviour
     }
 
     // Public methods for external access (called by SelectionManager)
+    // These are kept for backward compatibility but just trigger events
     public void ShowBuildingUI(Entity buildingEntity)
     {
-        // Events handle the actual UI display logic
+        // The BuildingUISystem will handle this through events
     }
 
     public void HideBuildingUI()
     {
-        // Events handle the actual UI hiding logic
+        // The BuildingUISystem will handle this through events
     }
 
     public Entity GetSelectedBuilding()
@@ -250,7 +270,7 @@ public class BuildingUI : MonoBehaviour
         }
     }
 
-    // FIXED: Resource buttons now send RPCs to server
+    // Resource button handlers
     private void AddResource1Amount(ClickEvent clickEvent)
     {
         SendResourceRpc(resource1Input.value, 0);

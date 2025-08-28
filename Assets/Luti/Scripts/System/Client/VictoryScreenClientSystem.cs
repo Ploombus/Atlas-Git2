@@ -21,7 +21,7 @@ public partial struct VictoryScreenClientSystem : ISystem
             .WithEntityAccess())
         {
             // Get final scores for display
-            var finalScores = PlayerStatsUtils.GetAllPlayerStats(state.World);
+            var finalScores = PlayerStatsUtils.GetAllPlayerStats();
 
             // Create victory screen data
             var victoryData = new VictoryScreenData

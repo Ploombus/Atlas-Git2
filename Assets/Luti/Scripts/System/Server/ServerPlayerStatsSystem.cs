@@ -4,7 +4,6 @@ using Unity.Mathematics;
 using Unity.Collections;
 using UnityEngine;
 
-
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SpawnServerSystem))] // CRITICAL: Run before SpawnServerSystem
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -33,6 +32,12 @@ public partial struct ServerPlayerStatsSystem : ISystem
         // Process player spawning FIRST (before SpawnServerSystem removes PendingPlayerSpawn)
         ProcessPlayerSpawning(ref state, ecb);
 
+        // Process resource reservation events
+        ProcessResourceReservations(ref state, ecb);
+
+        // Process deduction of reserved resources
+        ProcessReservedResourceDeductions(ref state, ecb);
+
         // Process stats change events
         ProcessStatsChangeEvents(ref state, ecb, config);
 
@@ -53,7 +58,6 @@ public partial struct ServerPlayerStatsSystem : ISystem
         {
             ProcessPlayerSpawningWithPrefab(ref state, ecb, references);
         }
-
     }
 
     private void ProcessPlayerSpawningWithPrefab(ref SystemState state, EntityCommandBuffer ecb, EntitiesReferencesLuti references)
@@ -70,6 +74,8 @@ public partial struct ServerPlayerStatsSystem : ISystem
             {
                 resource1 = STARTING_RESOURCE1,
                 resource2 = STARTING_RESOURCE2,
+                reservedResource1 = 0, // Initialize reserved resources
+                reservedResource2 = 0,
                 totalScore = 0,
                 resource1Score = 0,
                 resource2Score = 0,
@@ -81,10 +87,75 @@ public partial struct ServerPlayerStatsSystem : ISystem
 
             // Link connection to stats entity
             ecb.AddComponent(connectionEntity, new PlayerStatsEntity { Value = playerStatsEntity });
-
         }
     }
 
+    private void ProcessResourceReservations(ref SystemState state, EntityCommandBuffer ecb)
+    {
+        foreach (var (reservation, eventEntity) in
+            SystemAPI.Query<RefRO<ResourceReservationEvent>>()
+            .WithEntityAccess())
+        {
+            var playerStatsEntity = FindPlayerStatsEntity(ref state, reservation.ValueRO.playerConnection);
+
+            if (playerStatsEntity == Entity.Null)
+            {
+                ecb.DestroyEntity(eventEntity);
+                continue;
+            }
+
+            var stats = state.EntityManager.GetComponentData<PlayerStats>(playerStatsEntity);
+
+            if (reservation.ValueRO.isReservation)
+            {
+                // Reserve resources
+                stats.reservedResource1 += reservation.ValueRO.resource1Amount;
+                stats.reservedResource2 += reservation.ValueRO.resource2Amount;
+            }
+            else
+            {
+                // Release reservation (e.g., if spawn was cancelled)
+                stats.reservedResource1 = math.max(0, stats.reservedResource1 - reservation.ValueRO.resource1Amount);
+                stats.reservedResource2 = math.max(0, stats.reservedResource2 - reservation.ValueRO.resource2Amount);
+            }
+
+            ecb.SetComponent(playerStatsEntity, stats);
+            ecb.DestroyEntity(eventEntity);
+        }
+    }
+
+    private void ProcessReservedResourceDeductions(ref SystemState state, EntityCommandBuffer ecb)
+    {
+        foreach (var (deduction, eventEntity) in
+            SystemAPI.Query<RefRO<DeductReservedResourcesEvent>>()
+            .WithEntityAccess())
+        {
+            var playerStatsEntity = FindPlayerStatsEntity(ref state, deduction.ValueRO.playerConnection);
+
+            if (playerStatsEntity == Entity.Null)
+            {
+                ecb.DestroyEntity(eventEntity);
+                continue;
+            }
+
+            var stats = state.EntityManager.GetComponentData<PlayerStats>(playerStatsEntity);
+
+            // Deduct from actual resources
+            stats.resource1 -= deduction.ValueRO.resource1Amount;
+            stats.resource2 -= deduction.ValueRO.resource2Amount;
+
+            // Remove from reserved
+            stats.reservedResource1 = math.max(0, stats.reservedResource1 - deduction.ValueRO.resource1Amount);
+            stats.reservedResource2 = math.max(0, stats.reservedResource2 - deduction.ValueRO.resource2Amount);
+
+            // Clamp to ensure non-negative
+            stats.resource1 = math.max(0, stats.resource1);
+            stats.resource2 = math.max(0, stats.resource2);
+
+            ecb.SetComponent(playerStatsEntity, stats);
+            ecb.DestroyEntity(eventEntity);
+        }
+    }
 
     private void ProcessStatsChangeEvents(ref SystemState state, EntityCommandBuffer ecb, StatsConfig config)
     {
@@ -106,19 +177,25 @@ public partial struct ServerPlayerStatsSystem : ISystem
             // Update resources
             stats.resource1 += changeEvent.ValueRO.resource1Delta;
             stats.resource2 += changeEvent.ValueRO.resource2Delta;
+
+            // Award score points if requested
+            if (changeEvent.ValueRO.awardScorePoints && changeEvent.ValueRO.resource1Delta > 0)
+            {
+                int scoreGain = changeEvent.ValueRO.resource1Delta * config.pointsPerResource1;
+                stats.totalScore += scoreGain;
+                stats.resource1Score += scoreGain;
+            }
+
+            if (changeEvent.ValueRO.awardScorePoints && changeEvent.ValueRO.resource2Delta > 0)
+            {
+                int scoreGain = changeEvent.ValueRO.resource2Delta * config.pointsPerResource2;
+                stats.totalScore += scoreGain;
+                stats.resource2Score += scoreGain;
+            }
+
+            // Ensure resources don't go negative
             stats.resource1 = math.max(0, stats.resource1);
             stats.resource2 = math.max(0, stats.resource2);
-
-            // Award score points if specified
-            if (changeEvent.ValueRO.awardScorePoints)
-            {
-                int r1ScoreIncrease = math.max(0, changeEvent.ValueRO.resource1Delta) * config.pointsPerResource1;
-                int r2ScoreIncrease = math.max(0, changeEvent.ValueRO.resource2Delta) * config.pointsPerResource2;
-
-                stats.totalScore += r1ScoreIncrease + r2ScoreIncrease;
-                stats.resource1Score += r1ScoreIncrease;
-                stats.resource2Score += r2ScoreIncrease;
-            }
 
             ecb.SetComponent(playerStatsEntity, stats);
             ecb.DestroyEntity(eventEntity);
@@ -131,8 +208,7 @@ public partial struct ServerPlayerStatsSystem : ISystem
             SystemAPI.Query<RefRO<DirectScoreEvent>>()
             .WithEntityAccess())
         {
-            var playerConnection = scoreEvent.ValueRO.playerConnection;
-            var playerStatsEntity = FindPlayerStatsEntity(ref state, playerConnection);
+            var playerStatsEntity = FindPlayerStatsEntity(ref state, scoreEvent.ValueRO.playerConnection);
 
             if (playerStatsEntity == Entity.Null)
             {
@@ -142,7 +218,6 @@ public partial struct ServerPlayerStatsSystem : ISystem
 
             var stats = state.EntityManager.GetComponentData<PlayerStats>(playerStatsEntity);
             stats.totalScore += scoreEvent.ValueRO.scorePoints;
-
             ecb.SetComponent(playerStatsEntity, stats);
             ecb.DestroyEntity(eventEntity);
         }
@@ -150,49 +225,54 @@ public partial struct ServerPlayerStatsSystem : ISystem
 
     private void ProcessResourceRequests(ref SystemState state, EntityCommandBuffer ecb)
     {
-        foreach (var (request, receiveRequest, rpcEntity) in
+        foreach (var (rpc, request, rpcEntity) in
             SystemAPI.Query<RefRO<AddResourcesRpc>, RefRO<ReceiveRpcCommandRequest>>()
             .WithEntityAccess())
         {
-            var connection = receiveRequest.ValueRO.SourceConnection;
-
-            if (FindPlayerStatsEntity(ref state, connection) != Entity.Null)
+            var connection = request.ValueRO.SourceConnection;
+            var eventEntity = ecb.CreateEntity();
+            ecb.AddComponent(eventEntity, new StatsChangeEvent
             {
-                TriggerStatsChange(ecb, connection,
-                    request.ValueRO.resource1ToAdd,
-                    request.ValueRO.resource2ToAdd,
-                    awardScorePoints: true);
-            }
+                resource1Delta = rpc.ValueRO.resource1ToAdd,
+                resource2Delta = rpc.ValueRO.resource2ToAdd,
+                playerConnection = connection,
+                awardScorePoints = true
+            });
 
             ecb.DestroyEntity(rpcEntity);
         }
     }
 
-    private Entity FindPlayerStatsEntity(ref SystemState state, Entity playerConnection)
+    // Static helper methods for external systems
+    public static Entity FindPlayerStatsEntity(ref SystemState state, Entity connectionEntity)
     {
-        if (!state.EntityManager.HasComponent<PlayerStatsEntity>(playerConnection))
+        if (connectionEntity == Entity.Null || !state.EntityManager.Exists(connectionEntity))
             return Entity.Null;
 
-        var statsLink = state.EntityManager.GetComponentData<PlayerStatsEntity>(playerConnection);
-        return statsLink.Value;
+        if (!state.EntityManager.HasComponent<PlayerStatsEntity>(connectionEntity))
+            return Entity.Null;
+
+        var statsEntity = state.EntityManager.GetComponentData<PlayerStatsEntity>(connectionEntity).Value;
+
+        if (!state.EntityManager.Exists(statsEntity))
+            return Entity.Null;
+
+        return statsEntity;
     }
 
-    // Static utility methods for other systems
     public static Entity FindPlayerConnectionByNetworkId(ref SystemState state, int networkId)
     {
         var entityManager = state.EntityManager;
-
-        using var query = entityManager.CreateEntityQuery(
+        var query = entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<NetworkId>(),
-            ComponentType.ReadOnly<NetworkStreamConnection>(),
             ComponentType.ReadOnly<PlayerStatsEntity>()
         );
 
-        var entities = query.ToEntityArray(Allocator.Temp);
-        var networkIds = query.ToComponentDataArray<NetworkId>(Allocator.Temp);
+        var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        var networkIds = query.ToComponentDataArray<NetworkId>(Unity.Collections.Allocator.Temp);
 
         Entity result = Entity.Null;
-        for (int i = 0; i < networkIds.Length; i++)
+        for (int i = 0; i < entities.Length; i++)
         {
             if (networkIds[i].Value == networkId)
             {
@@ -203,56 +283,61 @@ public partial struct ServerPlayerStatsSystem : ISystem
 
         entities.Dispose();
         networkIds.Dispose();
+
         return result;
     }
 
-    public static void TriggerStatsChange(EntityCommandBuffer ecb, Entity playerConnection,
-        int resource1Delta, int resource2Delta, bool awardScorePoints = false)
+    // Check if player can afford (considering reserved resources)
+    public static bool CanAfford(ref SystemState state, Entity connectionEntity, int resource1Cost, int resource2Cost)
     {
-        var eventEntity = ecb.CreateEntity();
-        ecb.AddComponent(eventEntity, new StatsChangeEvent
-        {
-            resource1Delta = resource1Delta,
-            resource2Delta = resource2Delta,
-            playerConnection = playerConnection,
-            awardScorePoints = awardScorePoints
-        });
-    }
-
-    public static void AwardDirectScore(EntityCommandBuffer ecb, Entity playerConnection,
-        int scorePoints, ScoreReason reason = ScoreReason.Custom)
-    {
-        var eventEntity = ecb.CreateEntity();
-        ecb.AddComponent(eventEntity, new DirectScoreEvent
-        {
-            scorePoints = scorePoints,
-            playerConnection = playerConnection,
-            reason = reason
-        });
-    }
-
-    public static bool TrySpendResources(ref SystemState state, EntityCommandBuffer ecb,
-        Entity playerConnection, int resource1Cost, int resource2Cost)
-    {
-        if (!state.EntityManager.HasComponent<PlayerStatsEntity>(playerConnection))
-        {
+        var statsEntity = FindPlayerStatsEntity(ref state, connectionEntity);
+        if (statsEntity == Entity.Null)
             return false;
-        }
-
-        var statsEntity = state.EntityManager.GetComponentData<PlayerStatsEntity>(playerConnection).Value;
-        if (statsEntity == Entity.Null || !state.EntityManager.HasComponent<PlayerStats>(statsEntity))
-        {
-            return false;
-        }
 
         var stats = state.EntityManager.GetComponentData<PlayerStats>(statsEntity);
+        int availableR1 = stats.resource1 - stats.reservedResource1;
+        int availableR2 = stats.resource2 - stats.reservedResource2;
 
-        if (stats.resource1 >= resource1Cost && stats.resource2 >= resource2Cost)
+        return availableR1 >= resource1Cost && availableR2 >= resource2Cost;
+    }
+
+    // Reserve resources for pending spawn
+    public static bool TryReserveResources(ref SystemState state, EntityCommandBuffer ecb,
+        Entity connectionEntity, int resource1Cost, int resource2Cost)
+    {
+        if (!CanAfford(ref state, connectionEntity, resource1Cost, resource2Cost))
+            return false;
+
+        var eventEntity = ecb.CreateEntity();
+        ecb.AddComponent(eventEntity, new ResourceReservationEvent
         {
-            TriggerStatsChange(ecb, playerConnection, -resource1Cost, -resource2Cost, false);
-            return true;
-        }
+            resource1Amount = resource1Cost,
+            resource2Amount = resource2Cost,
+            playerConnection = connectionEntity,
+            isReservation = true
+        });
 
-        return false;
+        return true;
+    }
+
+    // Deduct reserved resources when unit spawns
+    public static void DeductReservedResources(ref SystemState state, EntityCommandBuffer ecb,
+        Entity connectionEntity, int resource1Cost, int resource2Cost)
+    {
+        var eventEntity = ecb.CreateEntity();
+        ecb.AddComponent(eventEntity, new DeductReservedResourcesEvent
+        {
+            resource1Amount = resource1Cost,
+            resource2Amount = resource2Cost,
+            playerConnection = connectionEntity
+        });
+    }
+
+    // Legacy method - now just checks without spending
+    public static bool TrySpendResources(ref SystemState state, EntityCommandBuffer ecb,
+        Entity connectionEntity, int resource1Cost, int resource2Cost)
+    {
+        // This now only checks affordability, actual spending is handled via events
+        return CanAfford(ref state, connectionEntity, resource1Cost, resource2Cost);
     }
 }

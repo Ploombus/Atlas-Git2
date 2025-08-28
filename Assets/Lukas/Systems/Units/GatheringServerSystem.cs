@@ -5,7 +5,6 @@ using Unity.Transforms;
 using Unity.NetCode;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial struct GatheringServerSystem : ISystem
 {
     // --- timing derived from your chop clip (client plays at Speed=1) ---

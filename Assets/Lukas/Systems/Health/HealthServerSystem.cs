@@ -1,78 +1,62 @@
 using Unity.Entities;
-using Unity.Mathematics;
-using System.Collections.Generic;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-public partial struct HealthSystem_Server : ISystem
+public partial struct HealthServerSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
-        var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
+        var ecb = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
 
-        foreach (var (healthState, entity) in
-                 SystemAPI.Query<RefRW<HealthState>>().WithEntityAccess())
+        // 1) Apply health deltas + queue despawns (server-authoritative)
+        foreach (var (healthRW, e) in SystemAPI.Query<RefRW<HealthState>>().WithEntityAccess())
         {
-            int delta = healthState.ValueRO.healthChange;
+            int delta = healthRW.ValueRO.healthChange;
             if (delta == 0) continue;
 
-            var oldStage = healthState.ValueRO.currentStage;
+            var oldStage = healthRW.ValueRO.currentStage;
             var newStage = HealthStageUtil.ApplyDelta(oldStage, delta, HealthStage.Dead, HealthStage.Healthy);
-            healthState.ValueRW.currentStage = HealthStageUtil.ApplyDelta(oldStage, delta, HealthStage.Dead, HealthStage.Healthy);
 
-            healthState.ValueRW.previousStage = oldStage;
-            healthState.ValueRW.currentStage = newStage;
-            healthState.ValueRW.healthChange = 0;
+            healthRW.ValueRW.previousStage = oldStage;
+            healthRW.ValueRW.currentStage  = newStage;
+            healthRW.ValueRW.healthChange  = 0;
 
-            //Dead
-            if (newStage == HealthStage.Dead)
-            {
-                if (!SystemAPI.HasComponent<PendingDespawn>(entity))
-                    buffer.AddComponent(entity, new PendingDespawn { seconds = 0.25f });
-            }
+            // Transitioned to Dead → schedule despawn once
+            if (newStage == HealthStage.Dead && oldStage != HealthStage.Dead && !SystemAPI.HasComponent<PendingDespawn>(e))
+                ecb.AddComponent(e, new PendingDespawn { seconds = 0.25f });
         }
 
-        if (!SystemAPI.HasSingleton<HealthStageTableSingleton>())
-            return;
-
-        ref var table = ref SystemAPI.GetSingleton<HealthStageTableSingleton>().Table.Value;
-
-        // Modifiers
-        foreach (var (healthState, unitModifiers) in
-                 SystemAPI.Query<RefRO<HealthState>, RefRW<UnitModifiers>>())
+        // 2) Update movement modifiers from health table (if available)
+        if (SystemAPI.TryGetSingleton<HealthStageTableSingleton>(out var tableSingleton))
         {
-            float speedMultiplier = 1f;
-
-            ref var entries = ref table.entries;
-            for (int i = 0; i < entries.Length; i++)
+            ref var table = ref tableSingleton.Table.Value;
+            foreach (var (healthRO, modsRW) in SystemAPI.Query<RefRO<HealthState>, RefRW<UnitModifiers>>())
             {
-                if (entries[i].stage == healthState.ValueRO.currentStage)
+                float mult = 1f;
+                ref var entries = ref table.entries;
+                for (int i = 0; i < entries.Length; i++)
                 {
-                    speedMultiplier = entries[i].moveSpeedMultiplier;
-                    break;
+                    if (entries[i].stage == healthRO.ValueRO.currentStage)
+                    {
+                        mult = entries[i].moveSpeedMultiplier;
+                        break;
+                    }
                 }
+                modsRW.ValueRW.moveSpeedMultiplier = mult;
             }
-
-            unitModifiers.ValueRW.moveSpeedMultiplier = speedMultiplier;
         }
 
-        //Cleanup
+        // 3) Despawn countdown
         float dt = SystemAPI.Time.DeltaTime;
-
-        foreach (var (pending, entity) in
-                SystemAPI.Query<RefRW<PendingDespawn>>().WithEntityAccess())
+        foreach (var (pendingRW, e) in SystemAPI.Query<RefRW<PendingDespawn>>().WithEntityAccess())
         {
-            pending.ValueRW.seconds -= dt;
-            if (pending.ValueRO.seconds <= 0f)
-                buffer.DestroyEntity(entity);
+            pendingRW.ValueRW.seconds -= dt;
+            if (pendingRW.ValueRO.seconds <= 0f)
+                ecb.DestroyEntity(e);
         }
 
-        buffer.Playback(state.EntityManager);
-        buffer.Dispose();
+        ecb.Playback(state.EntityManager);
+        ecb.Dispose();
     }
 }
 
-public struct PendingDespawn : IComponentData
-{
-    public float seconds;
-}
+public struct PendingDespawn : IComponentData { public float seconds; }

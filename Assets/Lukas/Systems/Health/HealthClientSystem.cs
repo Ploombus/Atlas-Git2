@@ -1,3 +1,4 @@
+/*
 using Unity.NetCode;
 using Unity.Entities;
 
@@ -54,3 +55,4 @@ public partial struct HealthClientSystem : ISystem
         }
     }
 }
+*/

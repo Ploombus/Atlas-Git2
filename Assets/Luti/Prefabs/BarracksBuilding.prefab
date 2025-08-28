@@ -27,8 +27,8 @@ Transform:
   m_GameObject: {fileID: 6288906594037575408}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1.7, y: 1.7, z: 1.7}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 7702196104795815144}
@@ -126,6 +126,7 @@ Transform:
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1464990014315747709}
+  - {fileID: 910648454934852796}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8283655853179010836
@@ -185,8 +186,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5, y: 5, z: 5}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 8, y: 6, z: 12}
+  m_Center: {x: 0, y: 3, z: -0.5}
 --- !u!114 &445331104062534353
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,7 +203,7 @@ MonoBehaviour:
   buildTime: 10
   radius: 10
   spawnRequested: 0
-  barracksGameObjectPrefab: {fileID: 7494198932097456828, guid: 94c94d3fa1972b34a91f8a0e5d2cf3b3, type: 3}
+  barracksGameObjectPrefab: {fileID: 2779851860145628317, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
   unitResource1Cost: 20
   unitResource2Cost: 0
 --- !u!114 &4747877185550617419
@@ -218,7 +219,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SelectionAuthoring
   selectorGameObject: {fileID: 6288906594037575408}
-  showScale: 1
+  showScale: 1.7
 --- !u!114 &342186423587915434
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -232,6 +233,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAuthoring
   color: {r: 1, g: 1, b: 1, a: 1}
+  FactionId: 0
 --- !u!114 &524587752226615362
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -244,5 +246,67 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08b52594f5610ba498d941387c3cef19, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TargetingSizeAuthoring
-  radius: 4
-  height: 2
+  radius: 5
+  height: 5
+--- !u!1001 &8984537815710587530
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7702196104795815144}
+    m_Modifications:
+    - target: {fileID: 2779851860145628317, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_Name
+      value: BarracksEgyptMesh
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+--- !u!4 &910648454934852796 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8073890334911245878, guid: 102537770ec80404aa5fb2702e63e813, type: 3}
+  m_PrefabInstance: {fileID: 8984537815710587530}
+  m_PrefabAsset: {fileID: 0}
