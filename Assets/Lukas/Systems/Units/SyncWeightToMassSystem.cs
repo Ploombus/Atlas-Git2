@@ -2,12 +2,15 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.Systems;
+using Managers;
 
 [UpdateInGroup(typeof(PhysicsSystemGroup))]
 partial struct SyncWeightToMassSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         foreach ((
             RefRO<UnitStats> unitStats,
             RefRO<PhysicsCollider> physicsCollider,
@@ -35,7 +38,7 @@ partial struct SyncWeightToMassSystem : ISystem
                 continue;
 
             // Recompute mass from collider mass properties
-            var collider  = physicsCollider.ValueRO.Value;
+            var collider = physicsCollider.ValueRO.Value;
             var massProps = collider.Value.MassProperties;
             physicsMass.ValueRW = PhysicsMass.CreateDynamic(massProps, w);
 

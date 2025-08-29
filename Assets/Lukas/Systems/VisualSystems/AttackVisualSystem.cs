@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.NetCode;
 using UnityEngine;
+using Managers;
 
 public struct AttackVisualRuntime : IComponentData
 {
@@ -24,6 +25,8 @@ public partial struct AttackVisualSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         float dt = SystemAPI.Time.DeltaTime;
 
         // ---------- PRE-PASS: add missing AttackVisualRuntime via ECB ----------

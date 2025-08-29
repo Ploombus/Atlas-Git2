@@ -1,12 +1,15 @@
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial struct UnitSpawnProgressSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var manager = UnitSpawnProgressManager.Instance;
         if (manager == null) return;
 

@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.NetCode;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateAfter(typeof(ApplyMoveRequestsServerSystem))]
@@ -14,6 +15,8 @@ partial struct MovementToEntityServerSystem : ISystem
         
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var em = state.EntityManager;
 
         em.CompleteDependencyBeforeRO<LocalToWorld>();

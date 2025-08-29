@@ -3,14 +3,15 @@ using Unity.NetCode;
 using Unity.Mathematics;
 using Unity.Collections;
 using UnityEngine;
+using Managers;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SpawnServerSystem))] // CRITICAL: Run before SpawnServerSystem
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public partial struct ServerPlayerStatsSystem : ISystem
 {
-    private const int STARTING_RESOURCE1 = 100;
-    private const int STARTING_RESOURCE2 = 100;
+    private const int STARTING_RESOURCE1 = 50;
+    private const int STARTING_RESOURCE2 = 0;
 
     public void OnCreate(ref SystemState state)
     {
@@ -26,6 +27,8 @@ public partial struct ServerPlayerStatsSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         var config = SystemAPI.GetSingleton<StatsConfig>();
 

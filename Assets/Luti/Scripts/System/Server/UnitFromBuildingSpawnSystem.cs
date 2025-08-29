@@ -15,8 +15,7 @@ public partial struct UnitFromBuildingSpawnSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
-        if (!CheckGameplayStateAccess.GetGameplayState(WorldManager.GetServerWorld()))
-            return;
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
 
         var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
         var unitReferences = SystemAPI.GetSingleton<EntitiesReferencesLukas>();
@@ -271,8 +270,30 @@ public partial struct UnitFromBuildingSpawnSystem : ISystem
         var rgba = PlayerColorUtil.FromId(spawnData.ownerNetworkId);
         buffer.SetComponent(unitEntity, new Owner { OwnerColor = rgba });
 
-        // Set initial target to spawn position
-        var targets = SpawnServerSystem.SpawnTargetsAt(spawnData.spawnPosition);
+        // NEW: Rally point integration - Set unit destination based on rally point
+        UnitTargets targets;
+        Entity buildingEntity = spawnData.buildingEntity;
+
+        if (SystemAPI.HasComponent<RallyPoint>(buildingEntity))
+        {
+            var rallyPoint = SystemAPI.GetComponent<RallyPoint>(buildingEntity);
+            if (rallyPoint.isSet)
+            {
+                // Use rally point as destination - unit will move there after spawning
+                targets = SpawnServerSystem.SpawnTargetsAt(rallyPoint.position);
+            }
+            else
+            {
+                // No rally point set, use default behavior
+                targets = SpawnServerSystem.SpawnTargetsAt(spawnData.spawnPosition);
+            }
+        }
+        else
+        {
+            // No rally point component, use default behavior
+            targets = SpawnServerSystem.SpawnTargetsAt(spawnData.spawnPosition);
+        }
+
         buffer.SetComponent(unitEntity, targets);
     }
 

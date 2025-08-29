@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Collections;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -13,6 +14,8 @@ public partial struct VictoryScreenClientSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         // Process victory screen RPCs from server

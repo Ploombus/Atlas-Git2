@@ -293,7 +293,7 @@ MonoBehaviour:
   attackRange: 1
   attackConeDeg: 20
   maxEntitiesHit: 2
-  attackSlowdown: 0.9
+  attackSlowdown: 0.666
   maxChaseMeters: 15
   attackDuration: 0.5
   impactDelay: 0.45

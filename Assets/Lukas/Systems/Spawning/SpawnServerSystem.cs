@@ -17,7 +17,7 @@ partial struct SpawnServerSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
-        if (!CheckGameplayStateAccess.GetGameplayState(WorldManager.GetServerWorld()))
+        if (!CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()))
             return;
 
         var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
@@ -122,7 +122,7 @@ partial struct SpawnServerSystem : ISystem
         lastAppliedSequence = 0,
         activeTargetSet     = false,
         targetEntity        = Entity.Null,
-        hasArrived          = true
+        hasArrived          = false
     };
 }
 

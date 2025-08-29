@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Collections;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateBefore(typeof(GatheringServerSystem))]
@@ -16,6 +17,8 @@ public partial struct ChopOrderServerSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (targetsRO, unit) in

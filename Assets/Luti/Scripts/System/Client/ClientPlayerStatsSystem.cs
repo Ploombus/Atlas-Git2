@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.NetCode;
+using Managers;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -12,9 +13,11 @@ public partial struct ClientPlayerStatsSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         if (!PlayerStatsUtils.TryGetLocalPlayerStats(out var currentStats))
         {
-            return; 
+            return;
         }
 
         // Check if this is the first time or if values changed

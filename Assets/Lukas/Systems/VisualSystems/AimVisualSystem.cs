@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using Unity.NetCode;
 using UnityEngine;
 using Unity.Transforms;
+using Managers;
 
 public struct AimIndicatorBind : IComponentData { public Entity target; }
 
@@ -19,6 +20,8 @@ public partial struct AimVisualSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var em   = state.EntityManager;
         var time = (float)SystemAPI.Time.ElapsedTime;
         var refs = SystemAPI.GetSingleton<EntitiesReferencesLukas>();

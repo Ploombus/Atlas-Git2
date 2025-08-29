@@ -9,6 +9,25 @@ using UnityEngine.Rendering; // added for ShadowCastingMode
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 partial struct HealthVisualSystem : ISystem
 {
+    static Material sUnlitMat;
+    static MaterialPropertyBlock sMpb;
+    static readonly int sBaseColorId = Shader.PropertyToID("_BaseColor");
+
+    static void EnsureMat()
+    {
+        if (sUnlitMat != null) return;
+
+        // URP unlit is safe in builds; if this returns null, include the shader (note below).
+        var shader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (shader == null)
+        {
+            Debug.LogError("URP/Unlit shader not found. Add it to Graphics > Always Included Shaders or reference a material asset.");
+            return;
+        }
+        sUnlitMat = new Material(shader);
+        sMpb = new MaterialPropertyBlock();
+    }
+
     public void OnUpdate(ref SystemState state)
     {
         if (!CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()))
@@ -53,6 +72,21 @@ partial struct HealthVisualSystem : ISystem
             fillRenderer.receiveShadows = false;
             // <<<
 
+            EnsureMat();
+            if (sUnlitMat != null)
+            {
+                bgRenderer.sharedMaterial = sUnlitMat;
+                fillRenderer.sharedMaterial = sUnlitMat;
+
+                sMpb.Clear();
+                sMpb.SetColor(sBaseColorId, Color.white);
+                bgRenderer.SetPropertyBlock(sMpb);
+
+                sMpb.Clear();
+                sMpb.SetColor(sBaseColorId, Color.green);
+                fillRenderer.SetPropertyBlock(sMpb);
+            }
+
             // start hidden (we'll decide below)
             bgRenderer.enabled = false;
             fillRenderer.enabled = false;
@@ -79,26 +113,30 @@ partial struct HealthVisualSystem : ISystem
 
             var color = stage switch
             {
-                HealthStage.Healthy  => new Color(0.20f, 0.85f, 0.20f),
-                HealthStage.Grazed   => new Color(0.75f, 0.85f, 0.20f),
-                HealthStage.Wounded  => new Color(0.95f, 0.55f, 0.15f),
+                HealthStage.Healthy => new Color(0.20f, 0.85f, 0.20f),
+                HealthStage.Grazed => new Color(0.75f, 0.85f, 0.20f),
+                HealthStage.Wounded => new Color(0.95f, 0.55f, 0.15f),
                 HealthStage.Critical => new Color(0.90f, 0.20f, 0.20f),
-                HealthStage.Dead     => new Color(0.40f, 0.40f, 0.40f),
+                HealthStage.Dead => new Color(0.40f, 0.40f, 0.40f),
                 _ => Color.magenta
             };
 
             var indicator = entityManager.GetComponentObject<UnitHealthIndicator>(entity);
-            if (indicator.fillRenderer != null)
-                indicator.fillRenderer.material.color = color;
+            if (indicator.fillRenderer != null && sUnlitMat != null)
+            {
+                sMpb.Clear();
+                sMpb.SetColor(sBaseColorId, color);
+                indicator.fillRenderer.SetPropertyBlock(sMpb);
+            }
 
             bool isSelected = SystemAPI.HasComponent<Selected>(entity)
                               && SystemAPI.IsComponentEnabled<Selected>(entity);
-            bool isDamaged  = stage != HealthStage.Healthy && stage != HealthStage.Dead;
+            bool isDamaged = stage != HealthStage.Healthy && stage != HealthStage.Dead;
 
             bool visible = (stage != HealthStage.Dead) && (isSelected || isDamaged);
 
             if (indicator.backgroundRenderer) indicator.backgroundRenderer.enabled = visible;
-            if (indicator.fillRenderer)       indicator.fillRenderer.enabled = visible;
+            if (indicator.fillRenderer) indicator.fillRenderer.enabled = visible;
         }
 
         // PASS 3 (defensive): if HealthState is gone (despawn), ensure hidden
@@ -106,7 +144,7 @@ partial struct HealthVisualSystem : ISystem
                  SystemAPI.Query<UnitHealthIndicator>().WithNone<HealthState>().WithEntityAccess())
         {
             if (indicator.backgroundRenderer) indicator.backgroundRenderer.enabled = false;
-            if (indicator.fillRenderer)       indicator.fillRenderer.enabled = false;
+            if (indicator.fillRenderer) indicator.fillRenderer.enabled = false;
         }
 
         buffer.Playback(entityManager);

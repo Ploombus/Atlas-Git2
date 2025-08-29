@@ -3,6 +3,7 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using System.Collections.Generic;
 
 public class VictoryScreenUI : MonoBehaviour
 {
@@ -11,7 +12,7 @@ public class VictoryScreenUI : MonoBehaviour
 
     [Header("Victory Screen Settings")]
     [SerializeField] private bool autoHideAfterSeconds = false;
-    [SerializeField] private float autoHideDelay = 15f; 
+    [SerializeField] private float autoHideDelay = 15f;
 
     private const string VICTORY_CONTAINER = "victory-container";
     private const string VICTORY_MESSAGE = "victory-message";
@@ -255,8 +256,33 @@ public class VictoryScreenUI : MonoBehaviour
     {
         HideVictoryScreen();
 
-        // Example: Return to main menu
-        // SceneManager.LoadScene("MainMenu");
+        Debug.Log("Leaving game...");
+        foreach (var world in World.All)
+        {
+            if (world.IsCreated && (world.Flags & WorldFlags.Game) != 0)
+            {
+                CheckGameplayStateAccess.SetGameplayState(world, false); //Or maybe even this??
+            }
+        }
+        DisposeWorlds();
+        SceneManager.LoadScene("MenuScene", LoadSceneMode.Additive);
+        SceneManager.UnloadSceneAsync("GameScene");
+    }
 
+    private void DisposeWorlds()
+    {
+        var worlds = new List<World>();
+        foreach (var world in World.All)
+        {
+            if (world.Flags.HasFlag(WorldFlags.GameClient) || world.Flags.HasFlag(WorldFlags.GameServer))
+            {
+                worlds.Add(world);
+            }
+        }
+        foreach (var world in worlds)
+        {
+            world.Dispose();
+        }
+        World.DefaultGameObjectInjectionWorld = null;
     }
 }

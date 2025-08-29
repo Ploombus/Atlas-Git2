@@ -19,21 +19,29 @@ using UnityEngine.Experimental.Rendering.RenderGraphModule;
 // ======================================================
 static class LinkVisualStyle
 {
-    public static float MinDistance      = 0.4f;  // meters
-    public static float VerticalOffsetY  = 0.01f;  // meters
+    public static float MinDistance       = 0.4f;  // meters
+    public static float VerticalOffsetY   = 0.01f; // meters
+
     // Enemy (entity target resolved)
-    public static float EnemyWidth       = 0.06f;  // meters
-    public static float EnemyOpacity     = 0.20f;  // 0..1
-    public static float EnemyDashLength  = 0.10f;  // meters; <=0 => solid
-    public static float EnemyGapLength   = 0.10f;  // meters; <=0 => solid
+    public static float EnemyWidth        = 0.06f; // meters
+    public static float EnemyOpacity      = 0.20f; // 0..1
+    public static float EnemyDashLength   = 0.10f; // meters; <=0 => solid
+    public static float EnemyGapLength    = 0.10f; // meters; <=0 => solid
+    public static bool  EnemyAnchorAtTargetEnd   = true;
+
     // Neutral/Other (ground/destination)
-    public static float NeutralWidth     = 0.06f;  // meters
-    public static float NeutralOpacity   = 0.20f;  // 0..1
-    public static float NeutralDashLength= 0.00f;  // 0=solid
-    public static float NeutralGapLength = 0.00f;  // 0=solid
-    // Anchor the dash pattern at the target end (so it doesn't "move" near the target)
-    public static bool EnemyAnchorAtTargetEnd   = true;
-    public static bool NeutralAnchorAtTargetEnd = false;
+    public static float NeutralWidth      = 0.06f; // meters
+    public static float NeutralOpacity    = 0.20f; // 0..1
+    public static float NeutralDashLength = 0.00f; // 0=solid
+    public static float NeutralGapLength  = 0.00f; // 0=solid
+    public static bool  NeutralAnchorAtTargetEnd = false;
+
+    // Rally (building → rally flag)
+    public static float RallyWidth        = 0.06f; // meters
+    public static float RallyOpacity      = 0.25f; // 0..1
+    public static float RallyDashLength   = 0.00f; // 0=solid
+    public static float RallyGapLength    = 0.00f; // 0=solid
+    public static bool  RallyAnchorAtFlagEnd     = true; // keep pattern stable at the flag end
 }
 
 // ======================================================
@@ -47,12 +55,13 @@ static class LinkVisualDraw
 
     static readonly List<Matrix4x4> sEnemyMats   = new(1024);
     static readonly List<Matrix4x4> sNeutralMats = new(1024);
+    static readonly List<Matrix4x4> sRallyMats   = new(512);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
         sQuad = null; sMat = null; sInit = false;
-        sEnemyMats.Clear(); sNeutralMats.Clear();
+        sEnemyMats.Clear(); sNeutralMats.Clear(); sRallyMats.Clear();
     }
 
     static void EnsureResources()
@@ -76,11 +85,11 @@ static class LinkVisualDraw
         sMat.enableInstancing = false;
 
         // Transparent blending (so opacity works)
-        if (sMat.HasProperty("_Surface")) sMat.SetFloat("_Surface", 1f);      // 0=Opaque, 1=Transparent
-        if (sMat.HasProperty("_Blend"))   sMat.SetFloat("_Blend",   0f);      // 0=Alpha
-        if (sMat.HasProperty("_SrcBlend")) sMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        if (sMat.HasProperty("_DstBlend")) sMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        if (sMat.HasProperty("_ZWrite"))   sMat.SetInt("_ZWrite",   0);       // don’t write depth for transparents
+        if (sMat.HasProperty("_Surface"))  sMat.SetFloat("_Surface", 1f);      // 0=Opaque, 1=Transparent
+        if (sMat.HasProperty("_Blend"))    sMat.SetFloat("_Blend",   0f);      // 0=Alpha
+        if (sMat.HasProperty("_SrcBlend")) sMat.SetInt("_SrcBlend",  (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        if (sMat.HasProperty("_DstBlend")) sMat.SetInt("_DstBlend",  (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        if (sMat.HasProperty("_ZWrite"))   sMat.SetInt("_ZWrite",    0);       // don’t write depth for transparents
         if (sMat.HasProperty("_AlphaClip")) sMat.SetFloat("_AlphaClip", 0f);
         sMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         sMat.DisableKeyword("_SURFACE_TYPE_OPAQUE");
@@ -99,10 +108,12 @@ static class LinkVisualDraw
         EnsureResources();
         sEnemyMats.Clear();
         sNeutralMats.Clear();
+        sRallyMats.Clear();
     }
 
     public static void AddEnemy(Matrix4x4 m)   => sEnemyMats.Add(m);
     public static void AddNeutral(Matrix4x4 m) => sNeutralMats.Add(m);
+    public static void AddRally(Matrix4x4 m)   => sRallyMats.Add(m);
 
     // --- Render Graph path (no warnings) ---
     public static void DrawIntoRG(RasterCommandBuffer cmd, UniversalCameraData cameraData)
@@ -118,6 +129,11 @@ static class LinkVisualDraw
         SetMaterialAlpha(LinkVisualStyle.NeutralOpacity);
         for (int i = 0; i < sNeutralMats.Count; i++)
             cmd.DrawMesh(sQuad, sNeutralMats[i], sMat, 0, 0, null);
+
+        // Rally bucket
+        SetMaterialAlpha(LinkVisualStyle.RallyOpacity);
+        for (int i = 0; i < sRallyMats.Count; i++)
+            cmd.DrawMesh(sQuad, sRallyMats[i], sMat, 0, 0, null);
     }
 
 #if LINKVISUAL_COMPAT
@@ -148,6 +164,10 @@ static class LinkVisualDraw
             SetMaterialAlpha(LinkVisualStyle.NeutralOpacity);
             for (int i = 0; i < sNeutralMats.Count; i++)
                 cmd.DrawMesh(sQuad, sNeutralMats[i], sMat, 0, 0, null);
+
+            SetMaterialAlpha(LinkVisualStyle.RallyOpacity);
+            for (int i = 0; i < sRallyMats.Count; i++)
+                cmd.DrawMesh(sQuad, sRallyMats[i], sMat, 0, 0, null);
 
             ctx.ExecuteCommandBuffer(cmd);
         }
@@ -230,6 +250,52 @@ static class LinkVisualDraw
         }
     }
 
+    public static void AddDashedRally(in Vector3 start, in Vector3 end, float thickness,
+                                      float dashLen, float gapLen)
+    {
+        // Solid if dash/gap disabled
+        if (dashLen <= 0f || gapLen <= 0f)
+        {
+            var mSolid = BuildQuadMatrix(start, end, thickness);
+            AddRally(mSolid);
+            return;
+        }
+
+        bool anchorAtEnd = LinkVisualStyle.RallyAnchorAtFlagEnd;
+
+        Vector3 a = anchorAtEnd ? end   : start; // anchor (stable) end
+        Vector3 b = anchorAtEnd ? start : end;   // moving end
+
+        Vector3 d = b - a;
+        float L = d.magnitude;
+        if (L <= 1e-6f) return;
+
+        Vector3 n = d / L;
+        float period = dashLen + gapLen;
+        if (period <= 1e-6f) period = dashLen;
+
+        int   full = Mathf.FloorToInt(L / period);
+        float rem  = L - full * period;
+
+        float cursor = 0f;
+        for (int i = 0; i < full; i++)
+        {
+            float a0 = cursor;
+            float a1 = cursor + dashLen;
+            var m = BuildQuadMatrix(a + n * a0, a + n * a1, thickness);
+            AddRally(m);
+            cursor += period;
+        }
+
+        if (rem > 1e-6f)
+        {
+            float a0 = cursor;
+            float a1 = cursor + Mathf.Min(dashLen, rem);
+            var m = BuildQuadMatrix(a + n * a0, a + n * a1, thickness);
+            AddRally(m);
+        }
+    }
+
     public static void DisposeResources()
     {
         sInit = false;
@@ -237,10 +303,9 @@ static class LinkVisualDraw
         if (sQuad != null) { UnityEngine.Object.DestroyImmediate(sQuad); sQuad = null; }
         sEnemyMats.Clear();
         sNeutralMats.Clear();
+        sRallyMats.Clear();
     }
 }
-
-
 
 // ======================================================
 // ECS SYSTEM (collects matrices each frame)
@@ -263,6 +328,7 @@ partial struct LinkVisualSystem : ISystem
         var em = state.EntityManager;
         LinkVisualDraw.BeginFrame();
 
+        // === Unit links (existing behavior) ===
         foreach (var (ltw, e) in
                  SystemAPI.Query<RefRO<LocalToWorld>>()
                           .WithAll<Unit, GhostOwnerIsLocal>()
@@ -290,6 +356,34 @@ partial struct LinkVisualSystem : ISystem
             var s = new Vector3(start.x, start.y, start.z);
             var t = new Vector3(end.x,   end.y,   end.z);
             LinkVisualDraw.AddDashed(s, t, width, dashLength, gapLength, isEntityTarget);
+        }
+
+        // === Building → Rally flag lines (new) ===
+        foreach (var (ltwBuilding, rp, building) in
+                 SystemAPI.Query<RefRO<LocalToWorld>, RefRO<RallyPoint>>()
+                          .WithAll<Building, Selected, GhostOwnerIsLocal>()
+                          .WithEntityAccess())
+        {
+            if (!rp.ValueRO.isSet) continue;
+
+            float3 start = ltwBuilding.ValueRO.Position;
+            float3 end   = rp.ValueRO.position;
+
+            start.y += LinkVisualStyle.VerticalOffsetY;
+            end.y   += LinkVisualStyle.VerticalOffsetY;
+
+            float3 delta = end - start;
+            if (math.lengthsq(delta) < LinkVisualStyle.MinDistance * LinkVisualStyle.MinDistance)
+                continue;
+
+            float width      = LinkVisualStyle.RallyWidth;
+            float dashLength = LinkVisualStyle.RallyDashLength;
+            float gapLength  = LinkVisualStyle.RallyGapLength;
+
+            LinkVisualDraw.AddDashedRally(
+                new Vector3(start.x, start.y, start.z),
+                new Vector3(end.x,   end.y,   end.z),
+                width, dashLength, gapLength);
         }
     }
 

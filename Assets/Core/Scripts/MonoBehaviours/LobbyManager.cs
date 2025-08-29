@@ -32,7 +32,7 @@ public class LobbyManager : MonoBehaviour
     private void Start()
     {
         instance = this;
-        playerName = "Barrel" + UnityEngine.Random.Range(10, 99);
+        playerName = "Otrokar" + UnityEngine.Random.Range(10, 99);
     }
 
     private void Update()
@@ -381,6 +381,8 @@ public class LobbyManager : MonoBehaviour
         var startGameButton = root.Q<VisualElement>("StartGameButton");
         startGameButton.style.display = DisplayStyle.Flex;
     }
+
+    /*
     private async void RelayTestAutoConnect()
     {
         //This function ensures that players get the Relay code and join it automaticaly on joining the Lobby (maybe)
@@ -411,6 +413,7 @@ public class LobbyManager : MonoBehaviour
             Debug.LogError($"Failed to update lobby with join code: {e.Message}");
         }
     }
+    */
 
     private async Task UpdatePlayerName(string newPlayerName)
     {

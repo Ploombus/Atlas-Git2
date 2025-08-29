@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.NetCode;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public partial struct GatheringServerSystem : ISystem
@@ -30,6 +31,8 @@ public partial struct GatheringServerSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         float dt = SystemAPI.Time.DeltaTime;
         var ecb  = new EntityCommandBuffer(Allocator.Temp);
 

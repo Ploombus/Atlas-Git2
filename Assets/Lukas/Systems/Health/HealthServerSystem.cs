@@ -1,10 +1,13 @@
 using Unity.Entities;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public partial struct HealthServerSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+        
         var ecb = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
 
         // 1) Apply health deltas + queue despawns (server-authoritative)

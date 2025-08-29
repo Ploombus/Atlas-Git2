@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.NetCode;
+using Managers;
 
 /// <summary>
 /// Simple system to trigger scoreboard updates when PlayerStats change
@@ -33,6 +34,8 @@ public partial struct ScoreboardUpdateSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         playerStatsLookup.Update(ref state);
 
         // Check if number of players changed

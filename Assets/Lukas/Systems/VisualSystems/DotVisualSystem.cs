@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using Unity.Transforms;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 partial struct DotVisualSystem : ISystem
@@ -13,6 +14,7 @@ partial struct DotVisualSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
 
         var unitTargetsLookup = SystemAPI.GetComponentLookup<UnitTargets>(true);
         var selectedLookup    = SystemAPI.GetComponentLookup<Selected>(true);

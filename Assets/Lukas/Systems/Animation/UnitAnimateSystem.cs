@@ -4,6 +4,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.NetCode;
+using Managers;
 
 [UpdateInGroup(typeof(PresentationSystemGroup), OrderFirst = true)]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -11,49 +12,69 @@ public partial struct UnitAnimateSystem : ISystem
 {
     // ========================= KNOBS =========================
     // --- Idle/motion gating ---
-    // When planar speed ≤ this, we are in true Idle (params zeroed).
     const float IDLE_TO_MOVING_MPS = 0.01f;
-    // Hysteresis: when slowing down, drop to idle below (IDLE_TO_MOVING_MPS * HYSTERESIS_RATIO)
-    const float HYSTERESIS_RATIO = 0.8f;   // 0.5..0.85 recommended
+    const float HYSTERESIS_RATIO   = 0.8f;
 
     // --- Smoothing near idle ---
-    const float LOCOMOTION_IDLE_DAMP_MULT = 1.3f;   // multiplies LOCOMOTION_DAMP near 0
+    const float LOCOMOTION_IDLE_DAMP_MULT = 1.3f;
 
     // --- Locomotion normalization (0..1) ---
-    const float RUN_FULL_MPS = 3.0f;       // what “full run” means for Locomotion/Forward/Strafe
-    const float LOC_EASE     = 0.5f;       // 0 = linear, 1 = smoothstep near 0
+    const float RUN_FULL_MPS = 3.0f;
+    const float LOC_EASE     = 0.5f;
 
-    // --- Chopping (wood) state handling ---
-    // Force a fixed playrate while in the chop state so timing matches server impact delay.
-    const bool  CHOP_FORCE_PLAYRATE   = true;
-    const float CHOP_FORCED_PLAYRATE  = 1.00f;   // typically 1.0
-    const bool  CHOP_SUPPRESS_LOCOMOTION = true; // While chopping, suppress locomotion inputs so the blend tree sits still.
+    // --- Chopping (wood) state handling (full-body clip lives on base layer) ---
+    const bool  CHOP_FORCE_PLAYRATE      = true;
+    const float CHOP_FORCED_PLAYRATE     = 1.00f;
+    const bool  CHOP_SUPPRESS_LOCOMOTION = true;
 
-    // --- Animator plumbing ---
-    const int   BASE_LAYER = 0; // 0 unless you use layers
-    const string WOOD_STATE_PATH   = "Base Layer.Gathering Wood"; // full path to be robust
-    const string WOOD_TRIGGER_NAME = "Wood";
+    // --- Animator plumbing / names ---
+    const int    BASE_LAYER = 0;
+    const string UPPER_LAYER_NAME         = "Upper Body";
+    const int    UPPER_LAYER_FALLBACK_IDX = 1;
+
+    // Full-paths or state names (adjust to match your controller)
+    const string LOCOMOTION_STATE = "Locomotion";
+
+    // Attack symmetry
+    const string ATTACK_TRIGGER_NAME = "Attack";
+    const string ATTACK_STATE_NAME   = "Melee"; // state on both layers (AnyState->Attack)
+
+    // Wood symmetry
+    const string WOOD_TRIGGER_NAME   = "Wood";
+    const string WOOD_STATE_NAME     = "Gathering Wood"; // state on both layers (AnyState->Gathering Wood)
+    const string WOOD_STATE_PATH     = "Base Layer.Gathering Wood"; // for in-wood detection only
 
     // --- Small internals (leave as-is) ---
-    const float LOCOMOTION_DAMP = 0.03f; // Animator float damping for Locomotion/axes
+    const float LOCOMOTION_DAMP = 0.03f;
     const float EPS             = 1e-4f;
 
-    // Cached hashes
+    // Optional: tiny deadzone after damping to avoid sub-1% residue
+    const float LOCOMOTION_POST_DAMP_DEADZONE = 0.02f;
+
     static readonly int WoodStateHash = Animator.StringToHash(WOOD_STATE_PATH);
+
+    static int GetUpperLayerIndex(Animator a)
+    {
+        int idx = a.GetLayerIndex(UPPER_LAYER_NAME);
+        return (idx >= 0) ? idx : UPPER_LAYER_FALLBACK_IDX;
+    }
 
     public void OnUpdate(ref SystemState state)
     {
-        var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
-        float delta = SystemAPI.Time.DeltaTime;
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
 
-        // helper: snap tiny targets to exact 0 to avoid damping residue
+        var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
+        float  delta = SystemAPI.Time.DeltaTime;
+        double now   = SystemAPI.Time.ElapsedTime;
+
+        // helper: snap tiny targets to exact 0 to avoid damping residue (use for axes)
         static void SetFloatZeroSafe(Animator a, string name, float target, float damp, float dt, float eps = 1e-3f)
         {
             if (math.abs(target) <= eps) a.SetFloat(name, 0f);
             else                         a.SetFloat(name, target, damp, dt);
         }
 
-        // Init animator for entities missing a reference
+        // Init animator + caches
         foreach (var (unitGameObjectPrefab, localTransform, entity) in
                  SystemAPI.Query<UnitGameObjectPrefab, LocalTransform>()
                           .WithNone<UnitAnimatorReference>()
@@ -67,6 +88,8 @@ public partial struct UnitAnimateSystem : ISystem
 
             unitBody.transform.SetPositionAndRotation(localTransform.Position, localTransform.Rotation);
             var anim = unitBody.GetComponent<Animator>();
+            if (unitBody.GetComponent<UnitUpperBodyAim>() == null)
+                unitBody.gameObject.AddComponent<UnitUpperBodyAim>();
             anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             anim.Update(0f);
 
@@ -74,59 +97,74 @@ public partial struct UnitAnimateSystem : ISystem
             for (int i = 0; i < renderers.Length; i++) renderers[i].enabled = true;
 
             buffer.AddComponent(entity, new UnitAnimatorReference { Value = anim });
+
+            // prev-pos cache
             buffer.AddComponent(entity, new AnimationPreviousPosition {
                 hasPreviousPosition = false,
-                previousPosition    = localTransform.Position
+                previousPosition    = localTransform.Position,
+                samplePosition      = localTransform.Position,
+                sampleTime          = now
             });
-        }
 
-        // Ensure client cache exists for any animated combat unit
-        foreach (var (animRef, entity) in
-                 SystemAPI.Query<UnitAnimatorReference>()
-                          .WithAll<Attacker>()
-                          .WithNone<AttackAnimClientCache>()
-                          .WithEntityAccess())
-        {
-            var st = SystemAPI.GetComponent<Attacker>(entity);
-            buffer.AddComponent(entity, new AttackAnimClientCache {
-                lastSeenAttackTick = st.attackTick,
-                lastSeenCancelTick = st.attackCancelTick
-            });
-        }
-
-        // Ensure client cache exists for any animated wood-gathering unit
-        foreach (var (animRef, entity) in
-                 SystemAPI.Query<UnitAnimatorReference>()
-                          .WithAll<GatheringWoodState>()
-                          .WithNone<WoodAnimClientCache>()
-                          .WithEntityAccess())
-        {
-            var st = SystemAPI.GetComponent<GatheringWoodState>(entity);
-            buffer.AddComponent(entity, new WoodAnimClientCache {
-                lastSeenStartTick  = st.woodStartTick,
-                lastSeenCancelTick = st.woodCancelTick
-            });
-        }
-        
-        // Ensure prev-pos exists for any animated unit (covers entities that already had UnitAnimatorReference)
-        foreach (var (lt, _, e) in
-                SystemAPI.Query<RefRO<LocalTransform>, UnitAnimatorReference>()
-                        .WithNone<AnimationPreviousPosition>()
-                        .WithEntityAccess())
-        {
-            buffer.AddComponent(e, new AnimationPreviousPosition
+            // client caches
+            if (SystemAPI.HasComponent<Attacker>(entity))
             {
-                hasPreviousPosition = true,
-                previousPosition    = lt.ValueRO.Position,
-                samplePosition      = lt.ValueRO.Position,           // NEW
-                sampleTime          = SystemAPI.Time.ElapsedTime     // NEW
-            });
+                var st = SystemAPI.GetComponent<Attacker>(entity);
+                buffer.AddComponent(entity, new AttackAnimClientCache {
+                    lastSeenAttackTick = st.attackTick,
+                    lastSeenCancelTick = st.attackCancelTick
+                });
+            }
+            if (SystemAPI.HasComponent<GatheringWoodState>(entity))
+            {
+                var st = SystemAPI.GetComponent<GatheringWoodState>(entity);
+                buffer.AddComponent(entity, new WoodAnimClientCache {
+                    lastSeenStartTick  = st.woodStartTick,
+                    lastSeenCancelTick = st.woodCancelTick
+                });
+            }
+        }
+
+        // Ensure caches for existing animated units
+        foreach (var (animRef, entity) in SystemAPI.Query<UnitAnimatorReference>().WithEntityAccess())
+        {
+            if (!SystemAPI.HasComponent<AnimationPreviousPosition>(entity) &&
+                SystemAPI.HasComponent<LocalTransform>(entity))
+            {
+                var lt = SystemAPI.GetComponent<LocalTransform>(entity);
+                buffer.AddComponent(entity, new AnimationPreviousPosition {
+                    hasPreviousPosition = true,
+                    previousPosition    = lt.Position,
+                    samplePosition      = lt.Position,
+                    sampleTime          = now
+                });
+            }
+
+            if (SystemAPI.HasComponent<Attacker>(entity) &&
+                !SystemAPI.HasComponent<AttackAnimClientCache>(entity))
+            {
+                var st = SystemAPI.GetComponent<Attacker>(entity);
+                buffer.AddComponent(entity, new AttackAnimClientCache {
+                    lastSeenAttackTick = st.attackTick,
+                    lastSeenCancelTick = st.attackCancelTick
+                });
+            }
+
+            if (SystemAPI.HasComponent<GatheringWoodState>(entity) &&
+                !SystemAPI.HasComponent<WoodAnimClientCache>(entity))
+            {
+                var st = SystemAPI.GetComponent<GatheringWoodState>(entity);
+                buffer.AddComponent(entity, new WoodAnimClientCache {
+                    lastSeenStartTick  = st.woodStartTick,
+                    lastSeenCancelTick = st.woodCancelTick
+                });
+            }
         }
 
         // Animate predicted + interpolated (skip if dead)
         foreach (var (localTransform, animatorReference, health, unitStats, unitModifiers, prevPosRW, entity) in
-         SystemAPI.Query<LocalTransform, UnitAnimatorReference, RefRO<HealthState>, RefRO<UnitStats>, RefRO<UnitModifiers>, RefRW<AnimationPreviousPosition>>()
-                  .WithEntityAccess())
+                 SystemAPI.Query<LocalTransform, UnitAnimatorReference, RefRO<HealthState>, RefRO<UnitStats>, RefRO<UnitModifiers>, RefRW<AnimationPreviousPosition>>()
+                          .WithEntityAccess())
         {
             var anim = animatorReference.Value;
             if (anim == null) continue;
@@ -140,12 +178,11 @@ public partial struct UnitAnimateSystem : ISystem
             anim.SetBool("Dead", isDead);
             if (isDead)
             {
-                // zero locomotion when dead; leave animator.speed as-is (controller handles death clip pacing)
                 anim.SetFloat("Locomotion", 0f, LOCOMOTION_DAMP, delta);
                 continue;
             }
 
-            // If we are currently in (or transitioning into) the wood state, suppress locomotion and force playrate
+            // If we are in or entering wood, suppress locomotion & force rate (visual-only)
             var stInfo = anim.GetCurrentAnimatorStateInfo(BASE_LAYER);
             var nxtInfo = anim.GetNextAnimatorStateInfo(BASE_LAYER);
             bool inWood = (stInfo.fullPathHash == WoodStateHash) || (nxtInfo.fullPathHash == WoodStateHash);
@@ -156,27 +193,21 @@ public partial struct UnitAnimateSystem : ISystem
                 {
                     anim.SetFloat("Locomotion", 0f, LOCOMOTION_DAMP, delta);
                     anim.SetFloat("Forward", 0f, LOCOMOTION_DAMP, delta);
-                    anim.SetFloat("Strafe", 0f, LOCOMOTION_DAMP, delta);
+                    anim.SetFloat("Strafe",  0f, LOCOMOTION_DAMP, delta);
                 }
 
                 if (CHOP_FORCE_PLAYRATE)
-                {
-                    animatorReference.Value.speed = CHOP_FORCED_PLAYRATE; // remapped from Speed param
-                }
+                    animatorReference.Value.speed = CHOP_FORCED_PLAYRATE;
 
-                // Keep visual synced
                 animatorReference.Value.transform.SetPositionAndRotation(localTransform.Position, localTransform.Rotation);
                 continue;
             }
             else
             {
-                // ensure normal playback rate when not chopping
                 animatorReference.Value.speed = 1f;
             }
 
             // -------- Normal locomotion pipeline --------
-
-            // Planar velocity: prefer transform-delta unless we are simulating locally (owner-predicted)
             float3 posNow = localTransform.Position;
             float3 vPlanar = float3.zero;
 
@@ -184,7 +215,7 @@ public partial struct UnitAnimateSystem : ISystem
                 SystemAPI.HasComponent<Simulate>(entity) &&
                 SystemAPI.HasComponent<GhostOwnerIsLocal>(entity);
 
-            // Per-frame transform delta (may be ~0 for some ordering)
+            // per-frame delta
             float3 vFromTransform = float3.zero;
             if (prevPosRW.ValueRO.hasPreviousPosition)
             {
@@ -194,23 +225,21 @@ public partial struct UnitAnimateSystem : ISystem
                 vFromTransform = dp / dt;
             }
 
-            // Windowed estimator (~0.10s) — insensitive to tiny per-frame deltas
-            double now = SystemAPI.Time.ElapsedTime;
+            // windowed estimator
             double dtWindow = now - prevPosRW.ValueRO.sampleTime;
             float3 vWindow = float3.zero;
-            if (dtWindow >= 0.08) // ~80ms to 150ms is fine; pick 80ms for responsiveness
+            if (dtWindow >= 0.08)
             {
                 float3 dps = posNow - prevPosRW.ValueRO.samplePosition;
                 dps.y = 0f;
                 float invDtW = (float)(1.0 / math.max(1e-6, dtWindow));
                 vWindow = dps * invDtW;
 
-                // advance the sampling window
                 prevPosRW.ValueRW.samplePosition = posNow;
                 prevPosRW.ValueRW.sampleTime     = now;
             }
 
-            // Physics velocity only when we truly simulate locally
+            // physics velocity (local sim)
             float3 vFromPhysics = float3.zero;
             if (isSimulatingLocally && SystemAPI.HasComponent<PhysicsVelocity>(entity))
             {
@@ -218,97 +247,142 @@ public partial struct UnitAnimateSystem : ISystem
                 vFromPhysics = new float3(pv.x, 0f, pv.z);
             }
 
-            // Pick the best signal in this order: physics (local), windowed, per-frame
+            // pick best signal
             vPlanar = vFromPhysics;
             if (math.lengthsq(vPlanar) < 1e-10f) vPlanar = vWindow;
             if (math.lengthsq(vPlanar) < 1e-10f) vPlanar = vFromTransform;
 
-            // Optional: clamp impossible spikes to keep animation sane
+            // clamp spikes
             float speedCap = 20f;
             float mag = math.length(vPlanar);
             if (mag > speedCap) vPlanar *= speedCap / mag;
 
-            // update prev-pos cache every frame so enemies animate smoothly
+            // update prev-pos cache
             prevPosRW.ValueRW.previousPosition    = posNow;
             prevPosRW.ValueRW.hasPreviousPosition = true;
 
-            // Local axes
+            // local axes
             float3 fwd = math.forward(localTransform.Rotation); fwd.y = 0f; fwd = math.normalizesafe(fwd, float3.zero);
             float3 right = math.cross(math.up(), fwd); right.y = 0f; right = math.normalizesafe(right, float3.zero);
 
-            // Signed components
-            float forwardSpeed = math.dot(vPlanar, fwd);     // +forward, −back
-            float strafeSpeed  = math.dot(vPlanar, right);   // +right, −left
+            // signed components
+            float forwardSpeed = math.dot(vPlanar, fwd);
+            float strafeSpeed  = math.dot(vPlanar, right);
             float planarSpeed  = math.length(vPlanar);
 
-            // Locomotion 0..1 with optional easing + hysteresis (NO early returns)
+            // normalized locomotion + easing
             float t = math.saturate(planarSpeed / math.max(0.001f, RUN_FULL_MPS));
             float locLinear = t;
             float locEase = math.lerp(locLinear, locLinear * locLinear * (3f - 2f * locLinear), math.saturate(LOC_EASE));
 
-            // Use previous smoothed Locomotion as a cheap state to decide if we "were moving"
+            // cheap moving state
             float prevLoc = anim.GetFloat("Locomotion");
             bool wasMoving = prevLoc > 0.1f;
 
-            // Hysteresis thresholds from one knob
             float enterThresh = IDLE_TO_MOVING_MPS;
             float exitThresh  = IDLE_TO_MOVING_MPS * HYSTERESIS_RATIO;
-
-            // Decide moving/idle with hysteresis
             bool moving = wasMoving ? (planarSpeed > exitThresh) : (planarSpeed > enterThresh);
 
-            // Stronger damping near idle so the fade is gentle
-            float nearIdle01 = math.saturate(locLinear * 2f); // 0..~0.5 is "near idle"
+            float nearIdle01 = math.saturate(locLinear * 2f);
             float locDamp = math.lerp(LOCOMOTION_DAMP * LOCOMOTION_IDLE_DAMP_MULT, LOCOMOTION_DAMP, nearIdle01);
 
-            // Apply Locomotion (0 when idle)
-            float locTarget = moving ? locEase : 0f;
-            SetFloatZeroSafe(anim, "Locomotion", locTarget,                 locDamp, delta);
+            // drive locomotion
+            anim.SetFloat("Locomotion", locEase, locDamp, delta);
+            float locAfter = anim.GetFloat("Locomotion");
+            if (locAfter < LOCOMOTION_POST_DAMP_DEADZONE && locEase < LOCOMOTION_POST_DAMP_DEADZONE)
+                anim.SetFloat("Locomotion", 0f);
 
-            // Directional inputs (zeroed when idle so the tree sits at Idle node)
+            // axes
             float forwardNorm = math.clamp(forwardSpeed / RUN_FULL_MPS, -1f, 1f);
             float strafeNorm  = math.clamp(strafeSpeed  / RUN_FULL_MPS, -1f, 1f);
-            SetFloatZeroSafe(anim, "Forward",    moving ? forwardNorm : 0f, locDamp, delta);
-            SetFloatZeroSafe(anim, "Strafe",     moving ? strafeNorm  : 0f, locDamp, delta);
+            SetFloatZeroSafe(anim, "Forward", moving ? forwardNorm : 0f, locDamp, delta);
+            SetFloatZeroSafe(anim,  "Strafe", moving ?  strafeNorm : 0f, locDamp, delta);
 
-            // Keep visual synced
+            // upper-body aim (disabled automatically by your wood branch above due to continue)
+            {
+                var upper = animatorReference.Value.GetComponent<UnitUpperBodyAim>();
+                if (upper != null)
+                {
+                    bool enableAim = false;
+                    float3 target = localTransform.Position + math.forward(localTransform.Rotation) * 8f;
+
+                    if (SystemAPI.HasComponent<Attacker>(entity))
+                    {
+                        var att = SystemAPI.GetComponent<Attacker>(entity);
+                        if (math.isfinite(att.aimRotation))
+                        {
+                            float3 dir = new float3(math.sin(att.aimRotation), 0f, math.cos(att.aimRotation));
+                            target = localTransform.Position + dir * 8f;
+                            enableAim = true;
+                        }
+                    }
+
+                    upper.SetAimTarget(target, enableAim);
+                }
+            }
+
+            // sync visual
             animatorReference.Value.transform.SetPositionAndRotation(localTransform.Position, localTransform.Rotation);
         }
 
-        // Attack triggers
+        // =================== SYMMETRIC TRIGGERS (Attack & Wood) ===================
+
+        // Attack: Trigger + persistent bool + CrossFade on BOTH layers; symmetric cancel.
         foreach (var (animRef, attackStateRO, cacheRW) in
                  SystemAPI.Query<UnitAnimatorReference, RefRO<Attacker>, RefRW<AttackAnimClientCache>>())
         {
+            var anim = animRef.Value;
+            int upperIdx = GetUpperLayerIndex(anim);
+
             if (attackStateRO.ValueRO.attackTick != cacheRW.ValueRO.lastSeenAttackTick)
             {
-                animRef.Value.SetTrigger("Attack");
+                anim.SetTrigger(ATTACK_TRIGGER_NAME);
+
+                // Enter the attack state explicitly on both layers this frame
+                anim.CrossFade(ATTACK_STATE_NAME, 0.05f, BASE_LAYER, 0f);
+                anim.CrossFade(ATTACK_STATE_NAME, 0.05f, upperIdx,   0f);
+
                 cacheRW.ValueRW.lastSeenAttackTick = attackStateRO.ValueRO.attackTick;
             }
 
             if (attackStateRO.ValueRO.attackCancelTick != cacheRW.ValueRO.lastSeenCancelTick)
             {
-                animRef.Value.ResetTrigger("Attack");
-                animRef.Value.CrossFade("Locomotion", 0.05f, 0, 0f);
+                anim.ResetTrigger(ATTACK_TRIGGER_NAME);
+
+                // Exit to locomotion on both layers
+                anim.CrossFade(LOCOMOTION_STATE, 0.05f, BASE_LAYER, 0f);
+                anim.CrossFade(LOCOMOTION_STATE, 0.05f, upperIdx,   0f);
+
                 cacheRW.ValueRW.lastSeenCancelTick = attackStateRO.ValueRO.attackCancelTick;
             }
         }
 
-        // Wood-gathering triggers
+        // Wood: Trigger + persistent bool + CrossFade on BOTH layers; symmetric cancel.
         foreach (var (animRef, woodStateRO, cacheRW) in
                  SystemAPI.Query<UnitAnimatorReference, RefRO<GatheringWoodState>, RefRW<WoodAnimClientCache>>())
         {
-            // Start chopping
+            var anim = animRef.Value;
+            int upperIdx = GetUpperLayerIndex(anim);
+
             if (woodStateRO.ValueRO.woodStartTick != cacheRW.ValueRO.lastSeenStartTick)
             {
-                animRef.Value.SetTrigger(WOOD_TRIGGER_NAME);
+                anim.SetTrigger(WOOD_TRIGGER_NAME);
+
+                // Enter the wood state explicitly on both layers this frame
+                anim.CrossFade(WOOD_STATE_NAME, 0.05f, BASE_LAYER, 0f);
+                anim.CrossFade(WOOD_STATE_NAME, 0.05f, upperIdx,   0f);
+
                 cacheRW.ValueRW.lastSeenStartTick = woodStateRO.ValueRO.woodStartTick;
             }
 
-            // Cancel/stop chopping
             if (woodStateRO.ValueRO.woodCancelTick != cacheRW.ValueRO.lastSeenCancelTick)
             {
-                animRef.Value.ResetTrigger(WOOD_TRIGGER_NAME);
-                animRef.Value.CrossFade("Locomotion", 0.05f, 0, 0f);
+                anim.ResetTrigger(WOOD_TRIGGER_NAME);
+
+                // Exit to locomotion on both layers
+                anim.CrossFade(LOCOMOTION_STATE, 0.05f, BASE_LAYER, 0f);
+                anim.CrossFade(LOCOMOTION_STATE, 0.05f, upperIdx,   0f);
+
                 cacheRW.ValueRW.lastSeenCancelTick = woodStateRO.ValueRO.woodCancelTick;
             }
         }
@@ -331,7 +405,6 @@ public struct AnimationPreviousPosition : IComponentData
     public bool   hasPreviousPosition;
     public float3 previousPosition;
 
-    // NEW: sampling window for robust planar velocity on interpolated ghosts
     public float3 samplePosition;
     public double sampleTime;
 }

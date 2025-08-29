@@ -11,7 +11,7 @@ public class UnitCombatAuthoring : MonoBehaviour
     public float attackRange = 1.5f;
     public float attackConeDeg = 30f;
     public int maxEntitiesHit = 3;
-    [Range(0f, 1f)] public float attackSlowdown = 0.3f;
+    [Range(0f, 1f)] public float attackSlowdown = 0.5f;
     public float maxChaseMeters = 15f;
 
     [Header("Animation Timing")]

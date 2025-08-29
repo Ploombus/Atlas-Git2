@@ -1,11 +1,14 @@
 using Unity.Entities;
 using Unity.NetCode;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 partial struct ApplyStancesFromInputSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         foreach (var (attackerRW, netRO) in SystemAPI
                  .Query<RefRW<Attacker>, RefRO<UnitTargetsNetcode>>())
         {

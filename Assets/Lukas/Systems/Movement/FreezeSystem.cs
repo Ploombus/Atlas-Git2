@@ -3,6 +3,7 @@ using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Physics;
+using Managers;
 
 [UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
 public partial struct FreezeSystem : ISystem
@@ -14,6 +15,8 @@ public partial struct FreezeSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+        
         foreach ((
             RefRW<LocalTransform> localTransform,
             RefRW<PhysicsVelocity> physicsVelocity)
@@ -27,7 +30,7 @@ public partial struct FreezeSystem : ISystem
             localTransform.ValueRW.Rotation.value.x = 0f;
             localTransform.ValueRW.Rotation.value.z = 0f;
             localTransform.ValueRW.Position.y = 0f;
-            
+
             /*
             if (math.abs(r.Rotation.value.x) > 0.001)
             {

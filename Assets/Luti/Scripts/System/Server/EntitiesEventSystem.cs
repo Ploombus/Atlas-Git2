@@ -1,16 +1,8 @@
 using Managers;
-using System;
-using System.Runtime.CompilerServices;
-using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
-using UnityEditorInternal;
-using UnityEngine;
-using UnityEngine.InputSystem.Processors;
-using UnityEngine.LightTransport;
-using static Unity.Entities.EntitiesJournaling;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 partial struct EntitiesEventSystem : ISystem
@@ -24,8 +16,7 @@ partial struct EntitiesEventSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
-
-
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
 
         var prefabRef = SystemAPI.GetSingleton<EntitiesReferencesLuti>();
         var spawnEntityBuffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);

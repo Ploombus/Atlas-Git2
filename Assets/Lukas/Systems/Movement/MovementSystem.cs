@@ -56,7 +56,6 @@ partial struct MovementSystem : ISystem
     const float SNAP_STOP_DIST_SQ = 0.1f;
 
     // --- Rotation (visual yaw) ---
-    const bool  AUTO_FACE_WHEN_IDLE     = true;  // when not moving, face nearest enemy in attack range
     const float MOVE_FACING_THRESHOLD   = 0.02f; // [m/s] prefer facing movement direction above this speed
     const float MAX_YAW_DEG_PER_SEC     = 180f;  // visual yaw cap
     const float ROT_YAW_WEIGHT_INFLUENCE = 1.20f; // ≥0
@@ -68,11 +67,19 @@ partial struct MovementSystem : ISystem
     const float ROT_STEER_WEIGHT_INFLUENCE = 1.00f; // ≥0
     const float ROT_STEER_TURN_RATE_MULT   = 3.0f;
 
+    // --- Leg follow for big aim angles ---
+    const float LEG_FOLLOW_START_DEG     = 80f;   // begin boosting turn rate
+    const float LEG_FOLLOW_FULL_DEG      = 130f;  // full boost by here
+    const float LEG_FOLLOW_TURN_RATE_MULT= 3.75f; // turn-rate multiplier at full
+    const float LEG_FOLLOW_SPEED_MAX_MPS = 1.2f;  // only boost when speed <= this (reduces foot slide)// --- Leg follow + aim-facing while attacking ---
+    const bool  FACE_AIM_WHEN_ATTACKING   = true;  // if true, body will turn toward Attacker.aimRotation when available
+
     // --- Running in place geez ---
     const float WRITE_ZERO_SPEED_EPS = 0.1f; 
 
-    // --- Attack range ---
+    // --- Combat ---
     const float REDUCE_ATTACKRANGE_BY = 0.1f; //reduction of AR for better targeting
+    const bool PRE_IMPACT_SLOW_ENABLED = true; // slow during impactDelay (pre-impact)
 
     // ===================== HELPERS =====================
 
@@ -269,7 +276,40 @@ partial struct MovementSystem : ISystem
                             float invMass = SystemAPI.GetComponentRO<PhysicsMass>(unitEntity).ValueRO.InverseMass;
                             if (invMass > 0f) massKgForTurn = 1f / invMass;
                         }
-                        float turnRate = ComputeYawTurnRateRadPerSec(speedNow, math.max(0.1f, moveSpeedForTurn), massKgForTurn) * ROT_YAW_TURN_RATE_MULT;
+
+                        // Prefer aim when attacking (optional knob)
+                        if (FACE_AIM_WHEN_ATTACKING && SystemAPI.HasComponent<Attacker>(unitEntity))
+                        {
+                            var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+                            if (math.isfinite(att.aimRotation))
+                                targetYaw = att.aimRotation;
+                        }
+
+                        // Leg-follow boost for big aim angles (low speed to avoid foot slide)
+                        float boost = 1f;
+                        if (SystemAPI.HasComponent<Attacker>(unitEntity))
+                        {
+                            var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+                            if (math.isfinite(att.aimRotation) &&
+                                speedNow <= LEG_FOLLOW_SPEED_MAX_MPS &&
+                                LEG_FOLLOW_FULL_DEG > LEG_FOLLOW_START_DEG)
+                            {
+                                float fwdYaw = GetCurrentYaw(localTransform.ValueRO.Rotation);
+                                float dyaw = att.aimRotation - fwdYaw;
+                                dyaw = math.atan2(math.sin(dyaw), math.cos(dyaw));
+                                float adyaw = math.abs(dyaw);
+
+                                float a0 = math.radians(LEG_FOLLOW_START_DEG);
+                                float a1 = math.radians(LEG_FOLLOW_FULL_DEG);
+                                float t = math.saturate((adyaw - a0) / math.max(1e-4f, (a1 - a0)));
+                                boost = math.lerp(1f, math.max(1f, LEG_FOLLOW_TURN_RATE_MULT), t);
+                            }
+                        }
+
+                        float turnRate = ComputeYawTurnRateRadPerSec(speedNow, math.max(0.1f, moveSpeedForTurn), massKgForTurn)
+                                         * ROT_YAW_TURN_RATE_MULT
+                                         * boost;
+
                         float globalCap = math.radians(MAX_YAW_DEG_PER_SEC);
                         if (globalCap > 0f) turnRate = math.min(turnRate, globalCap);
                         float maxDeltaYaw = turnRate * deltaTime;
@@ -367,7 +407,40 @@ partial struct MovementSystem : ISystem
                             float invMass = SystemAPI.GetComponentRO<PhysicsMass>(unitEntity).ValueRO.InverseMass;
                             if (invMass > 0f) massKgForTurn = 1f / invMass;
                         }
-                        float turnRate = ComputeYawTurnRateRadPerSec(speedNow, math.max(0.1f, moveSpeedForTurn), massKgForTurn) * ROT_YAW_TURN_RATE_MULT;
+
+                        // Prefer aim when attacking (optional knob)
+                        if (FACE_AIM_WHEN_ATTACKING && SystemAPI.HasComponent<Attacker>(unitEntity))
+                        {
+                            var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+                            if (math.isfinite(att.aimRotation))
+                                targetYaw = att.aimRotation;
+                        }
+
+                        // Leg-follow boost for big aim angles (low speed)
+                        float boost = 1f;
+                        if (SystemAPI.HasComponent<Attacker>(unitEntity))
+                        {
+                            var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+                            if (math.isfinite(att.aimRotation) &&
+                                speedNow <= LEG_FOLLOW_SPEED_MAX_MPS &&
+                                LEG_FOLLOW_FULL_DEG > LEG_FOLLOW_START_DEG)
+                            {
+                                float fwdYaw = GetCurrentYaw(localTransform.ValueRO.Rotation);
+                                float dyaw = att.aimRotation - fwdYaw;
+                                dyaw = math.atan2(math.sin(dyaw), math.cos(dyaw));
+                                float adyaw = math.abs(dyaw);
+
+                                float a0 = math.radians(LEG_FOLLOW_START_DEG);
+                                float a1 = math.radians(LEG_FOLLOW_FULL_DEG);
+                                float t = math.saturate((adyaw - a0) / math.max(1e-4f, (a1 - a0)));
+                                boost = math.lerp(1f, math.max(1f, LEG_FOLLOW_TURN_RATE_MULT), t);
+                            }
+                        }
+
+                        float turnRate = ComputeYawTurnRateRadPerSec(speedNow, math.max(0.1f, moveSpeedForTurn), massKgForTurn)
+                                         * ROT_YAW_TURN_RATE_MULT
+                                         * boost;
+
                         float globalCap = math.radians(MAX_YAW_DEG_PER_SEC);
                         if (globalCap > 0f) turnRate = math.min(turnRate, globalCap);
                         float maxDeltaYaw = turnRate * deltaTime;
@@ -383,6 +456,7 @@ partial struct MovementSystem : ISystem
                     unitTargets.ValueRW.hasArrived = false;
                 }
             }
+
 
             // ================= MOVE VECTOR & PRE-FACING (choose steer point) =================
             float3 position = localTransform.ValueRO.Position;
@@ -448,8 +522,14 @@ partial struct MovementSystem : ISystem
 
             if (SystemAPI.HasComponent<Attacker>(unitEntity) && SystemAPI.HasComponent<CombatStats>(unitEntity))
             {
-                var attacker = SystemAPI.GetComponentRO<Attacker>(unitEntity);
-                if (attacker.ValueRO.attackDurationTimeLeft > 0f)
+                var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+
+                bool inAttack     = att.attackDurationTimeLeft > 0f;
+                bool preImpact    = inAttack && att.impactDelayTimeLeft > 0f;
+                bool postImpact   = inAttack && att.impactDelayTimeLeft <= 0f;
+
+                bool applySlow = postImpact || (PRE_IMPACT_SLOW_ENABLED && preImpact);
+                if (applySlow)
                 {
                     var combatStats = SystemAPI.GetComponentRO<CombatStats>(unitEntity).ValueRO;
                     float slow = math.saturate(combatStats.attackSlowdown);
@@ -672,7 +752,36 @@ partial struct MovementSystem : ISystem
                     targetYaw = goalRotation;
                 }
 
-                float turnRate = ComputeYawTurnRateRadPerSec(speedNow, math.max(0.1f, moveSpeed), massKg) * ROT_YAW_TURN_RATE_MULT;
+                // Prefer aim when attacking (optional knob)
+                if (FACE_AIM_WHEN_ATTACKING && SystemAPI.HasComponent<Attacker>(unitEntity))
+                {
+                    var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+                    if (math.isfinite(att.aimRotation))
+                        targetYaw = att.aimRotation;
+                }
+
+                // Leg-follow boost for big aim angles (help lower body catch up when mostly idle/slow)
+                float boost = 1f;
+                if (SystemAPI.HasComponent<Attacker>(unitEntity))
+                {
+                    var att = SystemAPI.GetComponentRO<Attacker>(unitEntity).ValueRO;
+                    if (math.isfinite(att.aimRotation) &&
+                        speedNow <= LEG_FOLLOW_SPEED_MAX_MPS &&
+                        LEG_FOLLOW_FULL_DEG > LEG_FOLLOW_START_DEG)
+                    {
+                        float fwdYaw = GetCurrentYaw(localTransform.ValueRO.Rotation);
+                        float dyaw   = att.aimRotation - fwdYaw;
+                        dyaw         = math.atan2(math.sin(dyaw), math.cos(dyaw));
+                        float adyaw  = math.abs(dyaw);
+
+                        float a0 = math.radians(LEG_FOLLOW_START_DEG);
+                        float a1 = math.radians(LEG_FOLLOW_FULL_DEG);
+                        float t  = math.saturate((adyaw - a0) / math.max(1e-4f, (a1 - a0)));
+                        boost    = math.lerp(1f, math.max(1f, LEG_FOLLOW_TURN_RATE_MULT), t);
+                    }
+                }
+
+                float turnRate = ComputeYawTurnRateRadPerSec(speedNow, math.max(0.1f, moveSpeed), massKg) * ROT_YAW_TURN_RATE_MULT * boost;
                 float globalCap = math.radians(MAX_YAW_DEG_PER_SEC);
                 if (globalCap > 0f) turnRate = math.min(turnRate, globalCap);
                 float maxDeltaYaw = turnRate * deltaTime;

@@ -9,8 +9,7 @@
     -unity-font-style: bold;
     font-size: 28px;
     color: rgb(255, 255, 255);
-    -unity-background-image-tint-color: rgb(255, 255, 255);
-    background-color: rgba(51, 51, 51, 0.5);
+    background-color: rgba(7, 7, 7, 0.86);
     padding-top: 0;
     padding-right: 0;
     padding-bottom: 0;

@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
 using UnityEngine; // optional
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateAfter(typeof(MovementSystem))]
@@ -12,6 +13,7 @@ public partial struct CombatServerSystem : ISystem
     // --- Tunables --- 
     const float AttackRangeTolerance = 0.1f;  // small forgiveness at edges
     const float AimSwitchHysteresis = 0.10f;  // new target must be >=10% closer (distance) to switch
+    const float POST_IMPACT_SLOW_EXTRA_SECONDS = 0.5f; // 0 = no extra post-impact slow
 
     public void OnCreate(ref SystemState state)
     {
@@ -22,6 +24,8 @@ public partial struct CombatServerSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         float deltaTime = SystemAPI.Time.DeltaTime;
         EntityManager entityManager = state.EntityManager;
 
@@ -401,8 +405,11 @@ public partial struct CombatServerSystem : ISystem
 
             if (!anyInRange) continue;
 
-            attacker.attackDurationTimeLeft = math.max(0.01f, combat.attackDuration);
-            attacker.impactDelayTimeLeft    = math.clamp(combat.impactDelay, 0f, attacker.attackDurationTimeLeft);
+            float baseDuration  = math.max(0.01f, combat.attackDuration);
+            float totalDuration = baseDuration + math.max(0f, POST_IMPACT_SLOW_EXTRA_SECONDS);
+
+            attacker.attackDurationTimeLeft = totalDuration;
+            attacker.impactDelayTimeLeft    = math.clamp(combat.impactDelay, 0f, totalDuration);
             attacker.impactDone             = false;
             attacker.attackTick++;
             Debug.Log(attacker.attackTick);

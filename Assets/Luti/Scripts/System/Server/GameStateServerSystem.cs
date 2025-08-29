@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.NetCode;
 using Unity.Collections;
 using UnityEngine;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -33,6 +34,8 @@ public partial struct GameStateServerSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var gameState = SystemAPI.GetSingletonRW<GameState>();
         float deltaTime = SystemAPI.Time.DeltaTime;
 

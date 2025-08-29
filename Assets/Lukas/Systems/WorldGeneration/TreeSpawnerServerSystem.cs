@@ -3,6 +3,7 @@ using UnityEngine;
 using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.NetCode;
+using Managers;
 
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -16,6 +17,8 @@ partial struct TreeSpawnerServerSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         if (SystemAPI.HasSingleton<TreeSpawningDone>()) return;
         
         var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);

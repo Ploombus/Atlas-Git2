@@ -1,12 +1,15 @@
 using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 partial struct CenterCameraClientSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var ecb = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
 
         foreach (var (rpc, req, e) in

@@ -16,6 +16,8 @@ public partial struct BuildingUISystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+        
         // Get current selected building
         Entity currentlySelectedBuilding = Entity.Null;
         foreach (var (selected, entity) in

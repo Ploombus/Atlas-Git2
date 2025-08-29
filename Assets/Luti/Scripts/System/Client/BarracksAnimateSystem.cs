@@ -4,6 +4,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.NetCode;
+using Managers;
 
 [UpdateInGroup(typeof(PresentationSystemGroup), OrderFirst = true)]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -11,6 +12,8 @@ public partial struct BarracksAnimateSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
 
         // Init animator

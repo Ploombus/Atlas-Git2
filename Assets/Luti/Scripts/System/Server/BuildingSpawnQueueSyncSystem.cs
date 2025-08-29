@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;
+using Managers;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public partial struct BuildingSpawnQueueSyncSystem : ISystem
@@ -8,6 +9,8 @@ public partial struct BuildingSpawnQueueSyncSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
+        if (CheckGameplayStateAccess.GetGameplayState(WorldManager.GetClientWorld()) == false) return;
+
         var buffer = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
         int syncedCount = 0;
         int addedCount = 0;

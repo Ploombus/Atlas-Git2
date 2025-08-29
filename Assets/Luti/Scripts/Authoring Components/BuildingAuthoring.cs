@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 class BuildingAuthoring : MonoBehaviour
@@ -21,22 +22,22 @@ class BuildingAuthoring : MonoBehaviour
             {
                 buildTime = authoring.buildTime,
                 radius = authoring.radius,
-                
             });
             AddComponent(entity, new UnitSpawnFromBuilding
             {
                 spawnRequested = authoring.spawnRequested,
-             
-
             });
             AddComponentObject(entity, new UnitGameObjectPrefab { Value = authoring.barracksGameObjectPrefab });
-
             AddComponent(entity, new UnitSpawnCost
             {
                 unitResource1Cost = authoring.unitResource1Cost,
                 unitResource2Cost = authoring.unitResource2Cost,
+            });
 
-
+            AddComponent(entity, new RallyPoint
+            {
+                position = float3.zero,
+                isSet = false
             });
         }
 
